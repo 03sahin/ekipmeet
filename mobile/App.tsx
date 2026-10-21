@@ -1,22 +1,61 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { RootStackParamList } from './src/navigation/types';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { AuthProvider, useAuth } from './src/auth/AuthContext';
+import { AuthStackParamList, RootStackParamList } from './src/navigation/types';
+import LoginScreen from './src/screens/LoginScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
 import RoomDetailScreen from './src/screens/RoomDetailScreen';
 import RoomsScreen from './src/screens/RoomsScreen';
 
-// Stack: ekranları üst üste dizen navigasyon (geri tuşu otomatik gelir)
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const AppStack = createNativeStackNavigator<RootStackParamList>();
+const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+
+function RootNavigator() {
+  const { user, isLoading, logout } = useAuth();
+
+  // Açılışta kayıtlı oturum kontrol edilirken yükleniyor göstergesi
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
+
+  // user varsa uygulama ekranları, yoksa giriş/kayıt ekranları
+  return user ? (
+    <AppStack.Navigator>
+      <AppStack.Screen
+        name="Rooms"
+        component={RoomsScreen}
+        options={{
+          title: 'Ekip Odaları',
+          headerRight: () => (
+            <Pressable onPress={logout}>
+              <Text style={{ color: '#dc2626', fontWeight: '600' }}>Çıkış</Text>
+            </Pressable>
+          ),
+        }}
+      />
+      <AppStack.Screen name="RoomDetail" component={RoomDetailScreen} options={{ title: 'Oda Detayı' }} />
+    </AppStack.Navigator>
+  ) : (
+    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="Register" component={RegisterScreen} />
+    </AuthStack.Navigator>
+  );
+}
 
 export default function App() {
   return (
-    // NavigationContainer: tüm navigasyonu saran ana kapsayıcı, uygulamada bir kez kullanılır
-    <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="Rooms" component={RoomsScreen} options={{ title: 'Ekip Odaları' }} />
-        <Stack.Screen name="RoomDetail" component={RoomDetailScreen} options={{ title: 'Oda Detayı' }} />
-      </Stack.Navigator>
+    <AuthProvider>
+      <NavigationContainer>
+        <RootNavigator />
+      </NavigationContainer>
       <StatusBar style="auto" />
-    </NavigationContainer>
+    </AuthProvider>
   );
 }

@@ -1,5 +1,11 @@
-// Her ekranın adı ve aldığı parametreler.
+// Giriş yapmış kullanıcının ekranları
 export type RootStackParamList = {
-  Rooms: undefined; // Parametre almaz
-  RoomDetail: { roomId: string }; // Hangi odanın açılacağını alır
+  Rooms: undefined;
+  RoomDetail: { roomId: string };
+};
+
+// Giriş yapmamış kullanıcının ekranları
+export type AuthStackParamList = {
+  Login: undefined;
+  Register: undefined;
 };
