@@ -3,9 +3,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EkipMeet.Api.Data;
 
-// DbContext: Uygulama ile veritabanı arasındaki köprü.
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    // Her DbSet bir tabloya karşılık gelir.
     public DbSet<Room> Rooms => Set<Room>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        // Aynı e-postayla iki hesap açılamaz (veritabanı seviyesinde garanti)
+        modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
+        modelBuilder.Entity<RefreshToken>().HasIndex(t => t.TokenHash).IsUnique();
+    }
 }
