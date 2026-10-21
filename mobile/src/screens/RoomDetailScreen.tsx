@@ -1,20 +1,64 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { rooms } from '../data/rooms';
+import { useCallback, useLayoutEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { getErrorMessage } from '../api/errors';
+import { deleteRoom, getRoom } from '../api/rooms';
 import { RootStackParamList } from '../navigation/types';
+import { Room } from '../types/room';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RoomDetail'>;
 
-export default function RoomDetailScreen({ route }: Props) {
-  // Önceki ekrandan gelen parametre
+export default function RoomDetailScreen({ route, navigation }: Props) {
   const { roomId } = route.params;
-  const room = rooms.find((r) => r.id === roomId);
+  const [room, setRoom] = useState<Room | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Oda bulunamazsa uygulama çökmesin
+  // Düzenleyip geri dönünce güncel bilgiyi göstermek için her odaklanmada yükle
+  useFocusEffect(
+    useCallback(() => {
+      getRoom(roomId)
+        .then(setRoom)
+        .catch((e) => setError(getErrorMessage(e)));
+    }, [roomId])
+  );
+
+  // Üst çubukta oda adını göster
+  useLayoutEffect(() => {
+    if (room) navigation.setOptions({ title: room.name });
+  }, [room, navigation]);
+
+  function confirmDelete() {
+    if (!room) return;
+    Alert.alert('Odayı sil', `"${room.name}" silinsin mi? Bu işlem geri alınamaz.`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteRoom(room.id);
+            navigation.goBack();
+          } catch (e) {
+            Alert.alert('Silinemedi', getErrorMessage(e));
+          }
+        },
+      },
+    ]);
+  }
+
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.error}>{error}</Text>
+      </View>
+    );
+  }
+
   if (!room) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.topic}>Oda bulunamadı.</Text>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#2563eb" />
       </View>
     );
   }
@@ -22,30 +66,48 @@ export default function RoomDetailScreen({ route }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.name}>{room.name}</Text>
-      <Text style={styles.topic}>{room.topic}</Text>
-      <Text style={styles.members}>{room.memberCount} kişi içeride</Text>
+      {room.topic ? <Text style={styles.topic}>{room.topic}</Text> : null}
+      <Text style={styles.meta}>Sahibi: {room.ownerName}</Text>
+      <Text style={styles.meta}>Oluşturulma: {new Date(room.createdAt).toLocaleDateString('tr-TR')}</Text>
 
       <Pressable
-        style={styles.button}
+        style={styles.primaryButton}
         onPress={() => Alert.alert('Yakında', 'Odaya katılma Aşama 5\'te gelecek.')}
       >
-        <Text style={styles.buttonText}>Odaya katıl</Text>
+        <Text style={styles.primaryText}>Odaya katıl</Text>
       </Pressable>
+
+      {/* Butonlar sadece sahibe görünür. Asıl koruma backend'de; bu sadece arayüz kolaylığı. */}
+      {room.isOwner && (
+        <View style={styles.ownerActions}>
+          <Pressable
+            style={[styles.secondaryButton, styles.flex]}
+            onPress={() => navigation.navigate('RoomForm', { roomId: room.id })}
+          >
+            <Text style={styles.secondaryText}>Düzenle</Text>
+          </Pressable>
+          <Pressable style={[styles.dangerButton, styles.flex]} onPress={confirmDelete}>
+            <Text style={styles.dangerText}>Sil</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', padding: 24 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   name: { fontSize: 28, fontWeight: 'bold', color: '#111827' },
-  topic: { fontSize: 16, color: '#6b7280', marginTop: 8 },
-  members: { fontSize: 15, color: '#2563eb', marginTop: 16 },
-  button: {
-    backgroundColor: '#2563eb',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 32,
-  },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  topic: { fontSize: 16, color: '#4b5563', marginTop: 8 },
+  meta: { fontSize: 14, color: '#9ca3af', marginTop: 8 },
+  error: { color: '#dc2626', fontSize: 16, textAlign: 'center' },
+  primaryButton: { backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 32 },
+  primaryText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  ownerActions: { flexDirection: 'row', gap: 12, marginTop: 12 },
+  flex: { flex: 1 },
+  secondaryButton: { borderWidth: 1, borderColor: '#2563eb', paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
+  secondaryText: { color: '#2563eb', fontSize: 16, fontWeight: '600' },
+  dangerButton: { borderWidth: 1, borderColor: '#dc2626', paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
+  dangerText: { color: '#dc2626', fontSize: 16, fontWeight: '600' },
 });

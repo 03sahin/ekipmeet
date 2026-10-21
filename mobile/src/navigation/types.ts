@@ -1,10 +1,9 @@
-// Giriş yapmış kullanıcının ekranları
 export type RootStackParamList = {
   Rooms: undefined;
-  RoomDetail: { roomId: string };
+  RoomDetail: { roomId: number };
+  RoomForm: { roomId?: number }; // roomId varsa düzenleme, yoksa yeni oda
 };
 
-// Giriş yapmamış kullanıcının ekranları
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;

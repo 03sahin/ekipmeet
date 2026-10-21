@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace EkipMeet.Api.Dtos;
 
-// İstemciden gelen veri. Entity'yi doğrudan dışarı açmıyoruz.
 public class CreateRoomRequest
 {
     [Required(ErrorMessage = "Oda adı zorunludur.")]
@@ -12,3 +11,6 @@ public class CreateRoomRequest
     [MaxLength(300)]
     public string? Topic { get; set; }
 }
+
+// Güncelleme aynı alanları kullanır. Dikkat: OwnerId istemciden ASLA alınmaz.
+public class UpdateRoomRequest : CreateRoomRequest { }

@@ -1,4 +1,11 @@
 namespace EkipMeet.Api.Dtos;
 
-// İstemciye dönen veri. Sadece göstermek istediğimiz alanlar.
-public record RoomResponse(int Id, string Name, string Topic, DateTime CreatedAt);
+public record RoomResponse(
+    int Id,
+    string Name,
+    string Topic,
+    Guid OwnerId,
+    string OwnerName,
+    bool IsOwner,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt);

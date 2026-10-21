@@ -7,6 +7,7 @@ import { AuthStackParamList, RootStackParamList } from './src/navigation/types';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import RoomDetailScreen from './src/screens/RoomDetailScreen';
+import RoomFormScreen from './src/screens/RoomFormScreen';
 import RoomsScreen from './src/screens/RoomsScreen';
 
 const AppStack = createNativeStackNavigator<RootStackParamList>();
@@ -15,7 +16,6 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 function RootNavigator() {
   const { user, isLoading, logout } = useAuth();
 
-  // Açılışta kayıtlı oturum kontrol edilirken yükleniyor göstergesi
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -24,7 +24,6 @@ function RootNavigator() {
     );
   }
 
-  // user varsa uygulama ekranları, yoksa giriş/kayıt ekranları
   return user ? (
     <AppStack.Navigator>
       <AppStack.Screen
@@ -39,7 +38,13 @@ function RootNavigator() {
           ),
         }}
       />
-      <AppStack.Screen name="RoomDetail" component={RoomDetailScreen} options={{ title: 'Oda Detayı' }} />
+      <AppStack.Screen name="RoomDetail" component={RoomDetailScreen} options={{ title: '' }} />
+      <AppStack.Screen
+        name="RoomForm"
+        component={RoomFormScreen}
+        // Başlık, düzenleme mi yeni oda mı olduğuna göre değişir
+        options={({ route }) => ({ title: route.params?.roomId ? 'Odayı Düzenle' : 'Yeni Oda' })}
+      />
     </AppStack.Navigator>
   ) : (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
