@@ -74,6 +74,7 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<PresenceTracker>(); // Tek örnek: tüm bağlantılar aynı listeyi görür
 builder.Services.AddSingleton<ChatNotifier>();
+builder.Services.AddSingleton<MeetingNotifier>();
 
 var app = builder.Build();
 

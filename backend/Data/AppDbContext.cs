@@ -12,6 +12,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<ConversationMember> ConversationMembers => Set<ConversationMember>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<Meeting> Meetings => Set<Meeting>();
+    public DbSet<MeetingParticipant> MeetingParticipants => Set<MeetingParticipant>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -38,5 +40,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         // Sayfalama: "bu sohbette şu id'den küçük son 50 mesaj"
         modelBuilder.Entity<ChatMessage>().HasIndex(m => new { m.ConversationId, m.Id });
+
+        modelBuilder.Entity<Meeting>(e =>
+        {
+            e.Property(m => m.Status).HasConversion<string>().HasMaxLength(10);
+            e.Property(m => m.EndsAt); // private set olduğu için açıkça sütun olarak işaretliyoruz
+            e.HasIndex(m => m.StartsAt); // Takvim aralığı ve sıralama
+            // Düzenleyen kullanıcı silinirse toplantılar sessizce kaybolmasın
+            e.HasOne(m => m.Organizer).WithMany().HasForeignKey(m => m.OrganizerId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<MeetingParticipant>(e =>
+        {
+            e.HasKey(p => new { p.MeetingId, p.UserId }); // Bir kişi bir toplantıya bir kez davet edilir
+            e.HasIndex(p => p.UserId); // "Benim toplantılarım" sorgusu için
+            e.Property(p => p.Role).HasConversion<string>().HasMaxLength(12);
+            e.Property(p => p.Response).HasConversion<string>().HasMaxLength(10);
+        });
     }
 }

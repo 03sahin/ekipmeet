@@ -21,6 +21,12 @@ public static class RoomHubEvents
     public const string ConversationMessage = "ConversationMessage";
     public const string ConversationChanged = "ConversationChanged";
     public const string ConversationRemoved = "ConversationRemoved";
+
+    // Toplantılar (kişisel gruplara gider)
+    public const string MeetingInvited = "MeetingInvited";
+    public const string MeetingChanged = "MeetingChanged";
+    public const string MeetingCancelled = "MeetingCancelled";
+    public const string MeetingRemoved = "MeetingRemoved";
 }
 
 [Authorize] // Token'sız bağlantı kurulamaz; tüm metotlar giriş ister
