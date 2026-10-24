@@ -16,6 +16,11 @@ public static class RoomHubEvents
     public const string RoomCountChanged = "RoomCountChanged"; // Herkese: oda listesindeki kişi sayısı
     public const string ReceiveMessage = "ReceiveMessage";
     public const string RoomDeleted = "RoomDeleted";
+
+    // Sohbetler (kişisel gruplara gider)
+    public const string ConversationMessage = "ConversationMessage";
+    public const string ConversationChanged = "ConversationChanged";
+    public const string ConversationRemoved = "ConversationRemoved";
 }
 
 [Authorize] // Token'sız bağlantı kurulamaz; tüm metotlar giriş ister
@@ -25,6 +30,15 @@ public class RoomHub(AppDbContext db, PresenceTracker presence) : Hub
     private const int HistorySize = 50;
 
     public static string GroupName(int roomId) => $"room-{roomId}";
+    public static string UserGroup(Guid userId) => $"user-{userId}";
+
+    // Her bağlantı kişisel gruba girer: aynı kullanıcının tüm cihazları sohbet olaylarını alır.
+    // Yeniden bağlanınca bağlantı id'si değişir; bu metot tekrar çalışıp gruba yeniden ekler.
+    public override async Task OnConnectedAsync()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, UserGroup(Context.User!.GetUserId()));
+        await base.OnConnectedAsync();
+    }
 
     public async Task<JoinRoomResponse> JoinRoom(int roomId)
     {

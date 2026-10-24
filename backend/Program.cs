@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using EkipMeet.Api.Data;
 using EkipMeet.Api.Hubs;
 using EkipMeet.Api.Services;
@@ -9,7 +10,9 @@ using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+// Enum'lar JSON'da sayı yerine isim olarak gitsin ("Group", "Owner"): mobilde okunaklı ve sıra değişirse bozulmaz
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 
 // Swagger'a "Authorize" butonu ekler; token'ı bir kez girip korumalı endpoint'leri test edebiliriz
@@ -70,6 +73,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<PresenceTracker>(); // Tek örnek: tüm bağlantılar aynı listeyi görür
+builder.Services.AddSingleton<ChatNotifier>();
 
 var app = builder.Build();
 
