@@ -4,6 +4,7 @@ import { NavigatorScreenParams } from '@react-navigation/native';
 export type TabParamList = {
   Rooms: undefined;
   Conversations: undefined;
+  Meetings: undefined;
 };
 
 // Sekmelerin üstünde açılan ekranlar (alt çubuk bu ekranlarda gizlenir)
@@ -15,6 +16,9 @@ export type RootStackParamList = {
   Chat: { conversationId: string; title: string };
   NewChat: undefined;
   GroupInfo: { conversationId: string };
+  MeetingDetail: { meetingId: string };
+  MeetingForm: { meetingId?: string; date?: string }; // meetingId varsa düzenleme; date ("2026-10-24") yeni toplantının günü
+  InstantMeeting: undefined;
 };
 
 export type AuthStackParamList = {

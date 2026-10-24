@@ -9,7 +9,11 @@ import { AuthStackParamList, RootStackParamList, TabParamList } from './src/navi
 import ChatScreen from './src/screens/ChatScreen';
 import ConversationsScreen from './src/screens/ConversationsScreen';
 import GroupInfoScreen from './src/screens/GroupInfoScreen';
+import InstantMeetingScreen from './src/screens/InstantMeetingScreen';
 import LoginScreen from './src/screens/LoginScreen';
+import MeetingDetailScreen from './src/screens/MeetingDetailScreen';
+import MeetingFormScreen from './src/screens/MeetingFormScreen';
+import MeetingsScreen from './src/screens/MeetingsScreen';
 import NewChatScreen from './src/screens/NewChatScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import RoomDetailScreen from './src/screens/RoomDetailScreen';
@@ -59,6 +63,19 @@ function MainTabs() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="Meetings"
+        component={MeetingsScreen}
+        options={{
+          title: 'Toplantılar',
+          tabBarActiveTintColor: '#ea580c',
+          tabBarBadgeStyle: { backgroundColor: '#ea580c' },
+          lazy: false, // Yanıt bekleyen davet rozeti sekmeye girmeden de görünsün
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs.Navigator>
   );
 }
@@ -97,6 +114,9 @@ function RootNavigator() {
       />
       <AppStack.Screen name="NewChat" component={NewChatScreen} options={{ title: 'Yeni Sohbet' }} />
       <AppStack.Screen name="GroupInfo" component={GroupInfoScreen} options={{ title: 'Grup Bilgisi' }} />
+      <AppStack.Screen name="MeetingDetail" component={MeetingDetailScreen} options={{ title: 'Toplantı' }} />
+      <AppStack.Screen name="MeetingForm" component={MeetingFormScreen} options={{ title: 'Toplantı Planla' }} />
+      <AppStack.Screen name="InstantMeeting" component={InstantMeetingScreen} options={{ title: 'Hızlı Toplantı' }} />
     </AppStack.Navigator>
   ) : (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
