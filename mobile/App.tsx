@@ -8,6 +8,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import RoomDetailScreen from './src/screens/RoomDetailScreen';
 import RoomFormScreen from './src/screens/RoomFormScreen';
+import RoomLiveScreen from './src/screens/RoomLiveScreen';
 import RoomsScreen from './src/screens/RoomsScreen';
 
 const AppStack = createNativeStackNavigator<RootStackParamList>();
@@ -44,6 +45,11 @@ function RootNavigator() {
         component={RoomFormScreen}
         // Başlık, düzenleme mi yeni oda mı olduğuna göre değişir
         options={({ route }) => ({ title: route.params?.roomId ? 'Odayı Düzenle' : 'Yeni Oda' })}
+      />
+      <AppStack.Screen
+        name="RoomLive"
+        component={RoomLiveScreen}
+        options={({ route }) => ({ title: route.params.roomName })}
       />
     </AppStack.Navigator>
   ) : (

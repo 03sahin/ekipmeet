@@ -54,6 +54,28 @@ async function refreshTokens(): Promise<boolean> {
   return refreshPromise;
 }
 
+// JWT'nin ortadaki parçası (payload) base64url ile kodlanmış JSON'dur; "exp" saniye cinsinden bitiş zamanı
+function expiresSoon(token: string): boolean {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const { exp } = JSON.parse(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')));
+    return exp * 1000 - Date.now() < 30_000; // 30 sn'den az kaldıysa şimdiden yenile
+  } catch {
+    return true;
+  }
+}
+
+// SignalR gibi apiFetch dışından bağlananlar için: token'ın süresi dolmak üzereyse önce yeniler
+export async function getValidAccessToken(): Promise<string> {
+  if (!accessToken || expiresSoon(accessToken)) {
+    if (!(await refreshTokens())) {
+      onSessionExpired?.();
+      throw new ApiError(401, 'Oturumun sona erdi. Tekrar giriş yap.');
+    }
+  }
+  return accessToken!;
+}
+
 // Tüm API çağrıları buradan geçer: token ekler, süresi dolduysa yenileyip tekrar dener
 export async function apiFetch<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {
   const headers: Record<string, string> = {

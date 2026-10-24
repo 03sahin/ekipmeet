@@ -1,12 +1,13 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { getErrorMessage } from '../api/errors';
 import { getRooms } from '../api/rooms';
 import { useAuth } from '../auth/AuthContext';
 import RoomCard from '../components/RoomCard';
 import { RootStackParamList } from '../navigation/types';
+import { connectRoomHub, onHubEvent, onReconnected } from '../realtime/roomHub';
 import { Room } from '../types/room';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Rooms'>;
@@ -36,6 +37,19 @@ export default function RoomsScreen({ navigation }: Props) {
       load();
     }, [load])
   );
+
+  // Canlı kişi sayısı: biri bir odaya girip çıktıkça sunucu herkese yeni sayıyı yollar
+  useEffect(() => {
+    const offCount = onHubEvent('RoomCountChanged', (roomId: number, count: number) => {
+      setRooms((prev) => prev.map((r) => (r.id === roomId ? { ...r, memberCount: count } : r)));
+    });
+    const offReconnected = onReconnected(load); // Kopukken kaçırdığımız değişiklikleri al
+    connectRoomHub().catch(() => {}); // Bağlanamazsa liste yine çalışır, sadece sayı canlı olmaz
+    return () => {
+      offCount();
+      offReconnected();
+    };
+  }, [load]);
 
   if (loading) {
     return (
@@ -70,6 +84,7 @@ export default function RoomsScreen({ navigation }: Props) {
             topic={item.topic}
             ownerName={item.ownerName}
             isOwner={item.isOwner}
+            memberCount={item.memberCount}
             onPress={() => navigation.navigate('RoomDetail', { roomId: item.id })}
           />
         )}

@@ -8,4 +8,5 @@ public record RoomResponse(
     string OwnerName,
     bool IsOwner,
     DateTime CreatedAt,
-    DateTime? UpdatedAt);
+    DateTime? UpdatedAt,
+    int MemberCount); // Veritabanından değil, PresenceTracker'dan (bellekten) gelir

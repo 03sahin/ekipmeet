@@ -1,5 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { apiFetch, setAccessToken, setSessionExpiredHandler } from '../api/client';
+import { stopRoomHub } from '../realtime/roomHub';
 import { AuthResponse, User } from '../types/auth';
 import * as tokenStorage from './tokenStorage';
 
@@ -20,7 +21,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // useEffect(..., []): Uygulama açılınca bir kez çalışır
   useEffect(() => {
-    setSessionExpiredHandler(() => setUser(null));
+    setSessionExpiredHandler(() => {
+      stopRoomHub();
+      setUser(null);
+    });
 
     (async () => {
       try {
@@ -64,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Sunucuda iptal et; ağ hatası olsa bile cihazdan çıkış yapılsın
       apiFetch('/api/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken }) }).catch(() => {});
     }
+    await stopRoomHub(); // Canlı bağlantı da kapansın; yoksa çıkış yapan kullanıcı odada görünmeye devam eder
     setAccessToken(null);
     await tokenStorage.clearRefreshToken();
     setUser(null);

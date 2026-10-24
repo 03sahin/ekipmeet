@@ -89,6 +89,37 @@ namespace EkipMeet.Api.Migrations
                     b.ToTable("Rooms");
                 });
 
+            modelBuilder.Entity("EkipMeet.Api.Models.RoomMessage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("RoomId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("RoomId", "Id");
+
+                    b.ToTable("RoomMessages");
+                });
+
             modelBuilder.Entity("EkipMeet.Api.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -140,6 +171,25 @@ namespace EkipMeet.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("EkipMeet.Api.Models.RoomMessage", b =>
+                {
+                    b.HasOne("EkipMeet.Api.Models.Room", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EkipMeet.Api.Models.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Room");
+
+                    b.Navigation("Sender");
                 });
 
             modelBuilder.Entity("EkipMeet.Api.Models.User", b =>

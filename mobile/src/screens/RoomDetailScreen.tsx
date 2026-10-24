@@ -69,10 +69,11 @@ export default function RoomDetailScreen({ route, navigation }: Props) {
       {room.topic ? <Text style={styles.topic}>{room.topic}</Text> : null}
       <Text style={styles.meta}>Sahibi: {room.ownerName}</Text>
       <Text style={styles.meta}>Oluşturulma: {new Date(room.createdAt).toLocaleDateString('tr-TR')}</Text>
+      <Text style={styles.meta}>Şu an içeride: {room.memberCount} kişi</Text>
 
       <Pressable
         style={styles.primaryButton}
-        onPress={() => Alert.alert('Yakında', 'Odaya katılma Aşama 5\'te gelecek.')}
+        onPress={() => navigation.navigate('RoomLive', { roomId: room.id, roomName: room.name })}
       >
         <Text style={styles.primaryText}>Odaya katıl</Text>
       </Pressable>

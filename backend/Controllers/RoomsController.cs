@@ -2,9 +2,12 @@ using System.Linq.Expressions;
 using EkipMeet.Api.Data;
 using EkipMeet.Api.Dtos;
 using EkipMeet.Api.Extensions;
+using EkipMeet.Api.Hubs;
 using EkipMeet.Api.Models;
+using EkipMeet.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace EkipMeet.Api.Controllers;
@@ -12,12 +15,15 @@ namespace EkipMeet.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize] // Bu controller'daki TÜM endpoint'ler giriş ister
-public class RoomsController(AppDbContext db) : ControllerBase
+public class RoomsController(AppDbContext db, PresenceTracker presence, IHubContext<RoomHub> hub) : ControllerBase
 {
     // Entity → yanıt dönüşümü. Expression olduğu için EF bunu SQL'e çevirebilir.
+    // MemberCount SQL'de bilinmez; 0 yazıp sonra WithCount ile bellekten dolduruyoruz.
     private static Expression<Func<Room, RoomResponse>> ToResponse(Guid userId) =>
         r => new RoomResponse(r.Id, r.Name, r.Topic, r.OwnerId, r.Owner.DisplayName,
-            r.OwnerId == userId, r.CreatedAt, r.UpdatedAt);
+            r.OwnerId == userId, r.CreatedAt, r.UpdatedAt, 0);
+
+    private RoomResponse WithCount(RoomResponse room) => room with { MemberCount = presence.GetCount(room.Id) };
 
     [HttpGet]
     public async Task<ActionResult<List<RoomResponse>>> GetAll()
@@ -27,7 +33,7 @@ public class RoomsController(AppDbContext db) : ControllerBase
             .OrderByDescending(r => r.CreatedAt) // En yeni oda en üstte
             .Select(ToResponse(userId))
             .ToListAsync();
-        return Ok(rooms);
+        return Ok(rooms.Select(WithCount).ToList());
     }
 
     [HttpGet("{id:int}")]
@@ -38,7 +44,7 @@ public class RoomsController(AppDbContext db) : ControllerBase
             .Select(ToResponse(User.GetUserId()))
             .FirstOrDefaultAsync();
 
-        return room is null ? NotFound(new { message = "Oda bulunamadı." }) : Ok(room);
+        return room is null ? NotFound(new { message = "Oda bulunamadı." }) : Ok(WithCount(room));
     }
 
     [HttpPost]
@@ -75,7 +81,7 @@ public class RoomsController(AppDbContext db) : ControllerBase
         await db.SaveChangesAsync();
 
         var response = await db.Rooms.Where(r => r.Id == id).Select(ToResponse(userId)).FirstAsync();
-        return Ok(response);
+        return Ok(WithCount(response));
     }
 
     [HttpDelete("{id:int}")]
@@ -87,8 +93,12 @@ public class RoomsController(AppDbContext db) : ControllerBase
         if (room.OwnerId != User.GetUserId())
             return StatusCode(StatusCodes.Status403Forbidden, new { message = "Bu odayı sadece sahibi silebilir." });
 
-        db.Rooms.Remove(room);
+        db.Rooms.Remove(room); // Mesajları da cascade ile silinir
         await db.SaveChangesAsync();
+
+        // İçeride olanlar artık yok olan odaya mesaj yazamasın; ekranlarına da haber ver
+        presence.RemoveRoom(id);
+        await hub.Clients.Group(RoomHub.GroupName(id)).SendAsync(RoomHubEvents.RoomDeleted, id);
         return NoContent();
     }
 }

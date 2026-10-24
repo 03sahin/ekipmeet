@@ -1,5 +1,6 @@
 using System.Text;
 using EkipMeet.Api.Data;
+using EkipMeet.Api.Hubs;
 using EkipMeet.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -50,10 +51,25 @@ builder.Services
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromSeconds(30), // Süre dolunca en fazla 30 sn tolerans
         };
+
+        // WebSocket'te Authorization başlığı gönderilemediği için SignalR token'ı ?access_token= ile yollar.
+        // Bunu SADECE /hubs için kabul ediyoruz; normal API'de URL'deki token yok sayılır.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                    context.Token = accessToken;
+                return Task.CompletedTask;
+            },
+        };
     });
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<PresenceTracker>(); // Tek örnek: tüm bağlantılar aynı listeyi görür
 
 var app = builder.Build();
 
@@ -66,4 +82,5 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication(); // Önce "kimsin?"
 app.UseAuthorization();  // Sonra "yetkin var mı?" — sıra önemli
 app.MapControllers();
+app.MapHub<RoomHub>("/hubs/rooms");
 app.Run();
