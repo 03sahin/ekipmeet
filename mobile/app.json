@@ -1,21 +1,30 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "EkipMeet",
     "slug": "mobile",
+    "scheme": "ekipmeet",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ekipmeet.app"
     },
     "android": {
+      "package": "com.ekipmeet.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "blockedPermissions": ["android.permission.SYSTEM_ALERT_WINDOW"],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -25,7 +34,14 @@
       "expo-secure-store",
       "expo-status-bar",
       "@react-native-community/datetimepicker",
-      "expo-font"
+      "expo-font",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Görüntülü görüşmede seni gösterebilmek için kameraya erişim gerekiyor.",
+          "microphonePermission": "Görüntülü görüşmede konuşabilmen için mikrofona erişim gerekiyor."
+        }
+      ]
     ]
   }
 }

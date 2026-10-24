@@ -19,6 +19,7 @@ export type RootStackParamList = {
   MeetingDetail: { meetingId: string };
   MeetingForm: { meetingId?: string; date?: string }; // meetingId varsa düzenleme; date ("2026-10-24") yeni toplantının günü
   InstantMeeting: undefined;
+  Call: { callKey: string; title: string }; // callKey: "meeting:{guid}" ya da "room:{id}"
 };
 
 export type AuthStackParamList = {

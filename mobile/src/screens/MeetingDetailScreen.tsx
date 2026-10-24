@@ -18,6 +18,7 @@ import { MEETING } from '../components/meetings/theme';
 import UserSearch from '../components/UserSearch';
 import { RootStackParamList } from '../navigation/types';
 import { onHubEvent } from '../realtime/roomHub';
+import { meetingCallKey } from '../types/call';
 import { UserSummary } from '../types/chat';
 import { MeetingDetail, MeetingParticipant } from '../types/meeting';
 import { formatDuration, formatLongDate, formatTimeRange } from '../utils/date';
@@ -180,11 +181,11 @@ export default function MeetingDetailScreen({ route, navigation }: Props) {
 
       {meeting.description ? <Text style={styles.description}>{meeting.description}</Text> : null}
 
-      {/* Toplantıya katıl: görüntülü görüşme Aşama 8'de */}
+      {/* Toplantıya katıl: zaman ve yetki kontrolü backend'de de (JoinCall) yapılır */}
       <Pressable
         style={[styles.joinButton, !canJoin && styles.joinDisabled]}
         disabled={!canJoin}
-        onPress={() => Alert.alert('Yakında', "Görüntülü görüşme Aşama 8'de gelecek.")}
+        onPress={() => navigation.navigate('Call', { callKey: meetingCallKey(meetingId), title: meeting.title })}
       >
         <Ionicons name="videocam" size={20} color="#fff" />
         <Text style={styles.joinText}>Toplantıya katıl</Text>

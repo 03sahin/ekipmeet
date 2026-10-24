@@ -6,6 +6,8 @@ import { API_URL } from '../api/config';
 let connection: HubConnection | null = null;
 let startPromise: Promise<HubConnection> | null = null;
 const reconnectedListeners = new Set<() => void>();
+const reconnectingListeners = new Set<() => void>();
+const closedListeners = new Set<() => void>();
 
 function getConnection(): HubConnection {
   if (!connection) {
@@ -17,6 +19,9 @@ function getConnection(): HubConnection {
       .build();
     // Yeniden bağlanınca sunucu bizi yeni bir bağlantı olarak görür; ekranlar odaya tekrar katılmalı
     connection.onreconnected(() => reconnectedListeners.forEach((listener) => listener()));
+    // Görüşme ekranı bağlantı koptuğunda eşleri kapatır; yeniden denemeler de biterse (onclose) görüşmeden çıkar
+    connection.onreconnecting(() => reconnectingListeners.forEach((listener) => listener()));
+    connection.onclose(() => closedListeners.forEach((listener) => listener()));
   }
   return connection;
 }
@@ -46,17 +51,28 @@ export function onHubEvent(event: string, handler: (...args: any[]) => void): ()
   return () => conn.off(event, handler);
 }
 
-export function onReconnected(listener: () => void): () => void {
-  reconnectedListeners.add(listener);
+function subscribe(listeners: Set<() => void>, listener: () => void): () => void {
+  listeners.add(listener);
   return () => {
-    reconnectedListeners.delete(listener);
+    listeners.delete(listener);
   };
 }
+
+export const onReconnected = (listener: () => void) => subscribe(reconnectedListeners, listener);
+export const onReconnecting = (listener: () => void) => subscribe(reconnectingListeners, listener);
+export const onClosed = (listener: () => void) => subscribe(closedListeners, listener);
 
 // Ekrandan çıkarken: bağlıysa odadan çık, değilse yapacak bir şey yok (sunucu kopunca zaten çıkarır)
 export function leaveRoom() {
   if (connection?.state === HubConnectionState.Connected) {
     connection.invoke('LeaveRoom').catch(() => {});
+  }
+}
+
+// Görüşme ekranından çıkarken; bağlantı yoksa sunucu kopunca zaten çıkarır
+export function leaveCall() {
+  if (connection?.state === HubConnectionState.Connected) {
+    connection.invoke('LeaveCall').catch(() => {});
   }
 }
 

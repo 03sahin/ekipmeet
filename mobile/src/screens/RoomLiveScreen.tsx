@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
@@ -18,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { connectRoomHub, getHubErrorMessage, leaveRoom, onHubEvent, onReconnected } from '../realtime/roomHub';
+import { roomCallKey } from '../types/call';
 import { ChatMessage, JoinRoomResult, RoomMember } from '../types/room';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RoomLive'>;
@@ -128,7 +130,16 @@ export default function RoomLiveScreen({ route, navigation }: Props) {
     >
       {/* İçeridekiler */}
       <View style={styles.membersBar}>
-        <Text style={styles.membersTitle}>İçeride {members.length} kişi</Text>
+        <View style={styles.membersHeader}>
+          <Text style={styles.membersTitle}>İçeride {members.length} kişi</Text>
+          <Pressable
+            style={styles.videoButton}
+            onPress={() => navigation.navigate('Call', { callKey: roomCallKey(roomId), title: route.params.roomName })}
+          >
+            <Ionicons name="videocam" size={16} color="#fff" />
+            <Text style={styles.videoText}>Görüntülü katıl</Text>
+          </Pressable>
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {members.map((m) => (
             <View key={m.userId} style={[styles.chip, m.userId === user?.id && styles.chipMe]}>
@@ -193,7 +204,24 @@ const styles = StyleSheet.create({
   error: { color: '#dc2626', fontSize: 16, textAlign: 'center' },
   hint: { color: '#6b7280', marginTop: 12 },
   membersBar: { backgroundColor: '#fff', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
-  membersTitle: { fontSize: 13, color: '#6b7280', fontWeight: '600', marginHorizontal: 16, marginBottom: 6 },
+  membersHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginBottom: 6,
+  },
+  membersTitle: { fontSize: 13, color: '#6b7280', fontWeight: '600' },
+  videoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#16a34a',
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  videoText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   chips: { paddingHorizontal: 16, gap: 8 },
   chip: { backgroundColor: '#f3f4f6', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999 },
   chipMe: { backgroundColor: '#dbeafe' },

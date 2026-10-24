@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
 import { AuthStackParamList, RootStackParamList, TabParamList } from './src/navigation/types';
+import CallScreen from './src/screens/CallScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import ConversationsScreen from './src/screens/ConversationsScreen';
 import GroupInfoScreen from './src/screens/GroupInfoScreen';
@@ -117,6 +118,12 @@ function RootNavigator() {
       <AppStack.Screen name="MeetingDetail" component={MeetingDetailScreen} options={{ title: 'Toplantı' }} />
       <AppStack.Screen name="MeetingForm" component={MeetingFormScreen} options={{ title: 'Toplantı Planla' }} />
       <AppStack.Screen name="InstantMeeting" component={InstantMeetingScreen} options={{ title: 'Hızlı Toplantı' }} />
+      {/* Görüşme kendi üst çubuğunu çizer; koyu tam ekran */}
+      <AppStack.Screen
+        name="Call"
+        component={CallScreen}
+        options={{ headerShown: false, statusBarStyle: 'light', gestureEnabled: false }}
+      />
     </AppStack.Navigator>
   ) : (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
