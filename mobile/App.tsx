@@ -1,10 +1,16 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
-import { AuthStackParamList, RootStackParamList } from './src/navigation/types';
+import { AuthStackParamList, RootStackParamList, TabParamList } from './src/navigation/types';
+import ChatScreen from './src/screens/ChatScreen';
+import ConversationsScreen from './src/screens/ConversationsScreen';
+import GroupInfoScreen from './src/screens/GroupInfoScreen';
 import LoginScreen from './src/screens/LoginScreen';
+import NewChatScreen from './src/screens/NewChatScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import RoomDetailScreen from './src/screens/RoomDetailScreen';
 import RoomFormScreen from './src/screens/RoomFormScreen';
@@ -13,9 +19,52 @@ import RoomsScreen from './src/screens/RoomsScreen';
 
 const AppStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const Tabs = createBottomTabNavigator<TabParamList>();
+
+function LogoutButton() {
+  const { logout } = useAuth();
+  return (
+    <Pressable onPress={logout} style={{ marginRight: 16 }} hitSlop={8}>
+      <Text style={{ color: '#dc2626', fontWeight: '600' }}>Çıkış</Text>
+    </Pressable>
+  );
+}
+
+// Alt sekmeler: her sekmenin kendi üst çubuğu var, çıkış butonu ikisinde de
+function MainTabs() {
+  return (
+    <Tabs.Navigator screenOptions={{ headerRight: () => <LogoutButton /> }}>
+      <Tabs.Screen
+        name="Rooms"
+        component={RoomsScreen}
+        options={{
+          title: 'Ekip Odaları',
+          tabBarLabel: 'Odalar',
+          tabBarActiveTintColor: '#2563eb',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="Conversations"
+        component={ConversationsScreen}
+        options={{
+          title: 'Sohbetler',
+          tabBarActiveTintColor: '#16a34a',
+          tabBarBadgeStyle: { backgroundColor: '#16a34a' },
+          lazy: false, // Sekmeye hiç girilmese de okunmamış rozeti canlı güncellensin
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size} color={color} />
+          ),
+        }}
+      />
+    </Tabs.Navigator>
+  );
+}
 
 function RootNavigator() {
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -27,18 +76,8 @@ function RootNavigator() {
 
   return user ? (
     <AppStack.Navigator>
-      <AppStack.Screen
-        name="Rooms"
-        component={RoomsScreen}
-        options={{
-          title: 'Ekip Odaları',
-          headerRight: () => (
-            <Pressable onPress={logout}>
-              <Text style={{ color: '#dc2626', fontWeight: '600' }}>Çıkış</Text>
-            </Pressable>
-          ),
-        }}
-      />
+      {/* Sekmeler stack'in en altında; diğer ekranlar üstüne açılır ve alt çubuğu gizler */}
+      <AppStack.Screen name="Tabs" component={MainTabs} options={{ headerShown: false }} />
       <AppStack.Screen name="RoomDetail" component={RoomDetailScreen} options={{ title: '' }} />
       <AppStack.Screen
         name="RoomForm"
@@ -51,6 +90,13 @@ function RootNavigator() {
         component={RoomLiveScreen}
         options={({ route }) => ({ title: route.params.roomName })}
       />
+      <AppStack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={({ route }) => ({ title: route.params.title })}
+      />
+      <AppStack.Screen name="NewChat" component={NewChatScreen} options={{ title: 'Yeni Sohbet' }} />
+      <AppStack.Screen name="GroupInfo" component={GroupInfoScreen} options={{ title: 'Grup Bilgisi' }} />
     </AppStack.Navigator>
   ) : (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>

@@ -1,4 +1,5 @@
-import { useFocusEffect } from '@react-navigation/native';
+import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { CompositeScreenProps, useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -6,11 +7,15 @@ import { getErrorMessage } from '../api/errors';
 import { getRooms } from '../api/rooms';
 import { useAuth } from '../auth/AuthContext';
 import RoomCard from '../components/RoomCard';
-import { RootStackParamList } from '../navigation/types';
+import { RootStackParamList, TabParamList } from '../navigation/types';
 import { connectRoomHub, onHubEvent, onReconnected } from '../realtime/roomHub';
 import { Room } from '../types/room';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Rooms'>;
+// Sekme ekranı ama üstteki stack'e de (RoomDetail, RoomForm) gidebilmeli
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<TabParamList, 'Rooms'>,
+  NativeStackScreenProps<RootStackParamList>
+>;
 
 export default function RoomsScreen({ navigation }: Props) {
   const { user } = useAuth();
@@ -64,6 +69,8 @@ export default function RoomsScreen({ navigation }: Props) {
       <FlatList
         data={rooms}
         keyExtractor={(item) => String(item.id)}
+        numColumns={2} // Hızlı erişim ızgarası: yan yana iki kart
+        columnWrapperStyle={styles.column}
         refreshing={refreshing}
         onRefresh={() => {
           setRefreshing(true); // Aşağı çekince yenile
@@ -79,14 +86,18 @@ export default function RoomsScreen({ navigation }: Props) {
           !error ? <Text style={styles.empty}>Henüz oda yok. Sağ alttaki + ile ilk odanı oluştur.</Text> : undefined
         }
         renderItem={({ item }) => (
-          <RoomCard
-            name={item.name}
-            topic={item.topic}
-            ownerName={item.ownerName}
-            isOwner={item.isOwner}
-            memberCount={item.memberCount}
-            onPress={() => navigation.navigate('RoomDetail', { roomId: item.id })}
-          />
+          // Hücre her zaman %50: oda sayısı tek olsa da son kart tam genişliğe yayılmaz
+          <View style={styles.cell}>
+            <RoomCard
+              id={item.id}
+              name={item.name}
+              topic={item.topic}
+              ownerName={item.ownerName}
+              isOwner={item.isOwner}
+              memberCount={item.memberCount}
+              onPress={() => navigation.navigate('RoomDetail', { roomId: item.id })}
+            />
+          </View>
         )}
         contentContainerStyle={styles.listContent}
       />
@@ -103,6 +114,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f3f4f6' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   listContent: { padding: 16, paddingBottom: 96 },
+  column: { marginHorizontal: -6 }, // Hücrelerin yan boşluklarını dengeler
+  cell: { width: '50%', paddingHorizontal: 6 },
   greeting: { fontSize: 18, fontWeight: '600', color: '#111827', marginBottom: 16 },
   error: { color: '#dc2626', marginBottom: 12 },
   empty: { color: '#6b7280', textAlign: 'center', marginTop: 48, fontSize: 15 },
