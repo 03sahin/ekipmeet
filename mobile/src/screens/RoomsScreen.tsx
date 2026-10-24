@@ -76,7 +76,7 @@ export default function RoomsScreen({ navigation }: Props) {
           </>
         }
         ListEmptyComponent={
-          !error ? <Text style={styles.empty}>Henüz oda yok. Sağ alttaki + ile ilk odanı oluştur.</Text> : null
+          !error ? <Text style={styles.empty}>Henüz oda yok. Sağ alttaki + ile ilk odanı oluştur.</Text> : undefined
         }
         renderItem={({ item }) => (
           <RoomCard
