@@ -75,6 +75,10 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<PresenceTracker>(); // Tek örnek: tüm bağlantılar aynı listeyi görür
 builder.Services.AddSingleton<ChatNotifier>();
 builder.Services.AddSingleton<MeetingNotifier>();
+builder.Services.AddSingleton<CallTracker>(); // Görüşmedekiler de PresenceTracker gibi tek listede
+builder.Services.AddSingleton<CallNotifier>();
+// ICE (STUN/TURN) sunucuları yapılandırmadan; TURN şifresi User Secrets'tan gelir
+builder.Services.Configure<WebRtcOptions>(builder.Configuration.GetSection("WebRtc"));
 
 var app = builder.Build();
 

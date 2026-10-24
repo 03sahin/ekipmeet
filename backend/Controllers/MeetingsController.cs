@@ -13,7 +13,7 @@ namespace EkipMeet.Api.Controllers;
 [ApiController]
 [Route("api/meetings")]
 [Authorize]
-public class MeetingsController(AppDbContext db, MeetingNotifier notifier) : ControllerBase
+public class MeetingsController(AppDbContext db, MeetingNotifier notifier, CallNotifier callNotifier) : ControllerBase
 {
     private const int MaxParticipants = 50; // Düzenleyen hariç davet edilebilecek kişi sayısı
     private const int MaxRangeDays = 100; // Takvim tek seferde en fazla bu kadar günlük aralık ister
@@ -204,6 +204,7 @@ public class MeetingsController(AppDbContext db, MeetingNotifier notifier) : Con
         await db.SaveChangesAsync();
 
         await notifier.Cancelled(meeting.Participants.Select(p => p.UserId), id);
+        await callNotifier.EndCall(CallTracker.MeetingKey(id), "Toplantı düzenleyen tarafından iptal edildi.");
         return Ok(await LoadDetail(id, me));
     }
 
@@ -273,6 +274,8 @@ public class MeetingsController(AppDbContext db, MeetingNotifier notifier) : Con
 
         await notifier.Removed(userId, id);
         await notifier.Changed(meeting.Participants.Where(p => p.UserId != userId).Select(p => p.UserId), id);
+        // Çıkarılan kişi görüşmedeyse artık yetkisi yok
+        await callNotifier.RemoveUser(CallTracker.MeetingKey(id), userId, "Düzenleyen seni toplantıdan çıkardı.");
         return Ok(await LoadDetail(id, me));
     }
 

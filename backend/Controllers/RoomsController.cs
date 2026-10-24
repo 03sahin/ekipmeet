@@ -15,7 +15,8 @@ namespace EkipMeet.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize] // Bu controller'daki TÜM endpoint'ler giriş ister
-public class RoomsController(AppDbContext db, PresenceTracker presence, IHubContext<RoomHub> hub) : ControllerBase
+public class RoomsController(AppDbContext db, PresenceTracker presence, IHubContext<RoomHub> hub, CallNotifier callNotifier)
+    : ControllerBase
 {
     // Entity → yanıt dönüşümü. Expression olduğu için EF bunu SQL'e çevirebilir.
     // MemberCount SQL'de bilinmez; 0 yazıp sonra WithCount ile bellekten dolduruyoruz.
@@ -99,6 +100,7 @@ public class RoomsController(AppDbContext db, PresenceTracker presence, IHubCont
         // İçeride olanlar artık yok olan odaya mesaj yazamasın; ekranlarına da haber ver
         presence.RemoveRoom(id);
         await hub.Clients.Group(RoomHub.GroupName(id)).SendAsync(RoomHubEvents.RoomDeleted, id);
+        await callNotifier.EndCall(CallTracker.RoomKey(id), "Oda sahibi tarafından silindi.");
         return NoContent();
     }
 }
