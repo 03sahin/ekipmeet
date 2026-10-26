@@ -13,7 +13,11 @@ namespace EkipMeet.Api.Controllers;
 [ApiController]
 [Route("api/meetings")]
 [Authorize]
-public class MeetingsController(AppDbContext db, MeetingNotifier notifier, CallNotifier callNotifier) : ControllerBase
+public class MeetingsController(
+    AppDbContext db,
+    MeetingNotifier notifier,
+    CallNotifier callNotifier,
+    NotificationService notifications) : ControllerBase
 {
     private const int MaxParticipants = 50; // Düzenleyen hariç davet edilebilecek kişi sayısı
     private const int MaxRangeDays = 100; // Takvim tek seferde en fazla bu kadar günlük aralık ister
@@ -119,6 +123,7 @@ public class MeetingsController(AppDbContext db, MeetingNotifier notifier, CallN
         await db.SaveChangesAsync();
 
         await notifier.Invited(participantIds, meeting.Id);
+        await notifications.Meeting(participantIds, NotificationType.MeetingInvited, meeting, User.GetDisplayName());
         await notifier.Changed([me], meeting.Id); // Düzenleyenin diğer cihazlarındaki takvim de güncellensin
         return CreatedAtAction(nameof(GetById), new { id = meeting.Id }, await LoadDetail(meeting.Id, me));
     }
@@ -141,6 +146,7 @@ public class MeetingsController(AppDbContext db, MeetingNotifier notifier, CallN
         await db.SaveChangesAsync();
 
         await notifier.Invited(participantIds, meeting.Id);
+        await notifications.Meeting(participantIds, NotificationType.MeetingInvited, meeting, User.GetDisplayName());
         await notifier.Changed([me], meeting.Id);
         return CreatedAtAction(nameof(GetById), new { id = meeting.Id }, await LoadDetail(meeting.Id, me));
     }
@@ -186,6 +192,7 @@ public class MeetingsController(AppDbContext db, MeetingNotifier notifier, CallN
         await db.SaveChangesAsync();
 
         await notifier.Changed(meeting.Participants.Select(p => p.UserId), id);
+        await notifications.Meeting(Others(meeting, me), NotificationType.MeetingChanged, meeting, User.GetDisplayName());
         return Ok(await LoadDetail(id, me));
     }
 
@@ -204,6 +211,7 @@ public class MeetingsController(AppDbContext db, MeetingNotifier notifier, CallN
         await db.SaveChangesAsync();
 
         await notifier.Cancelled(meeting.Participants.Select(p => p.UserId), id);
+        await notifications.Meeting(Others(meeting, me), NotificationType.MeetingCancelled, meeting, User.GetDisplayName());
         await callNotifier.EndCall(CallTracker.MeetingKey(id), "Toplantı düzenleyen tarafından iptal edildi.");
         return Ok(await LoadDetail(id, me));
     }
@@ -252,6 +260,7 @@ public class MeetingsController(AppDbContext db, MeetingNotifier notifier, CallN
         await db.SaveChangesAsync();
 
         await notifier.Invited([userId], id);
+        await notifications.Meeting([userId], NotificationType.MeetingInvited, meeting, User.GetDisplayName());
         await notifier.Changed(existing, id);
         return Ok(await LoadDetail(id, me));
     }
@@ -273,11 +282,16 @@ public class MeetingsController(AppDbContext db, MeetingNotifier notifier, CallN
         await db.SaveChangesAsync();
 
         await notifier.Removed(userId, id);
+        await notifications.Meeting([userId], NotificationType.MeetingRemoved, meeting, User.GetDisplayName());
         await notifier.Changed(meeting.Participants.Where(p => p.UserId != userId).Select(p => p.UserId), id);
         // Çıkarılan kişi görüşmedeyse artık yetkisi yok
         await callNotifier.RemoveUser(CallTracker.MeetingKey(id), userId, "Düzenleyen seni toplantıdan çıkardı.");
         return Ok(await LoadDetail(id, me));
     }
+
+    // Düzenleyenin kendi yaptığı değişiklik için kendisine bildirim gitmez
+    private static IEnumerable<Guid> Others(Meeting meeting, Guid me) =>
+        meeting.Participants.Select(p => p.UserId).Where(id => id != me);
 
     private async Task<(List<Guid> Ids, string? Error)> ValidateParticipants(IEnumerable<Guid> raw, Guid me)
     {

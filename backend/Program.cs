@@ -3,6 +3,8 @@ using System.Text.Json.Serialization;
 using EkipMeet.Api.Data;
 using EkipMeet.Api.Hubs;
 using EkipMeet.Api.Services;
+using EkipMeet.Api.Services.Push;
+using EkipMeet.Api.Services.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -79,6 +81,18 @@ builder.Services.AddSingleton<CallTracker>(); // Görüşmedekiler de PresenceTr
 builder.Services.AddSingleton<CallNotifier>();
 // ICE (STUN/TURN) sunucuları yapılandırmadan; TURN şifresi User Secrets'tan gelir
 builder.Services.Configure<WebRtcOptions>(builder.Configuration.GetSection("WebRtc"));
+
+// Dosyalar: şimdilik yerel disk. Buluta geçince sadece bu satır değişir (IFileStorage'ın başka implementasyonu).
+builder.Services.Configure<FileStorageOptions>(builder.Configuration.GetSection("FileStorage"));
+builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
+
+// Bildirimler ve push (Expo Push API). Push:Enabled false ise push sessizce atlanır.
+builder.Services.AddSingleton<ConversationPresence>();
+builder.Services.AddScoped<NotificationService>();
+builder.Services.Configure<PushOptions>(builder.Configuration.GetSection("Push"));
+builder.Services.AddSingleton<PushQueue>();
+builder.Services.AddHttpClient(ExpoPushService.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddHostedService<ExpoPushService>();
 
 var app = builder.Build();
 

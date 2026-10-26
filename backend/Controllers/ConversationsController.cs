@@ -1,9 +1,11 @@
 using System.Linq.Expressions;
+using System.Text.Json;
 using EkipMeet.Api.Data;
 using EkipMeet.Api.Dtos;
 using EkipMeet.Api.Extensions;
 using EkipMeet.Api.Models;
 using EkipMeet.Api.Services;
+using EkipMeet.Api.Services.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,15 +16,25 @@ namespace EkipMeet.Api.Controllers;
 [ApiController]
 [Route("api/conversations")]
 [Authorize]
-public class ConversationsController(AppDbContext db, ChatNotifier notifier) : ControllerBase
+public class ConversationsController(
+    AppDbContext db,
+    ChatNotifier notifier,
+    NotificationService notifications,
+    ConversationPresence conversationPresence,
+    IFileStorage storage) : ControllerBase
 {
     private const int MaxPageSize = 100;
 
     // Üye olmayana 403 değil 404: "böyle bir sohbet var ama giremezsin" bilgisi bile sızmasın
     private NotFoundObjectResult ConversationNotFound() => NotFound(new { message = "Sohbet bulunamadı." });
 
+    // IsImage hesaplanan bir özellik, SQL'e çevrilemez; aynı kuralı burada açıkça yazıyoruz
     private static readonly Expression<Func<ChatMessage, ChatMessageResponse>> ToMessageResponse =
-        m => new ChatMessageResponse(m.Id, m.ConversationId, m.SenderId, m.Sender.DisplayName, m.Text, m.CreatedAt);
+        m => new ChatMessageResponse(m.Id, m.ConversationId, m.SenderId, m.Sender.DisplayName, m.Text, m.CreatedAt,
+            m.Attachment == null
+                ? null
+                : new AttachmentResponse(m.Attachment.Id, m.Attachment.OriginalName, m.Attachment.ContentType,
+                    m.Attachment.SizeBytes, m.Attachment.ContentType.StartsWith("image/")));
 
     // Sohbeti üyeleriyle getirir; kullanıcı üye değilse null (yani 404)
     private Task<Conversation?> FindForMember(Guid id, Guid userId) =>
@@ -45,7 +57,9 @@ public class ConversationsController(AppDbContext db, ChatNotifier notifier) : C
                     : m.Conversation.Members.Where(o => o.UserId != me).Select(o => o.User.DisplayName).FirstOrDefault() ?? "",
                 m.Conversation.Messages
                     .OrderByDescending(x => x.Id)
-                    .Select(x => new LastMessagePreview(x.SenderId, x.Sender.DisplayName, x.Text, x.CreatedAt))
+                    .Select(x => new LastMessagePreview(x.SenderId, x.Sender.DisplayName, x.Text, x.CreatedAt,
+                        x.Attachment != null ? x.Attachment.OriginalName : null,
+                        x.Attachment != null && x.Attachment.ContentType.StartsWith("image/")))
                     .FirstOrDefault(),
                 m.Conversation.LastMessageAt,
                 // Okunmamış: başkalarının, son okuduğum andan sonra yazdıkları
@@ -151,8 +165,9 @@ public class ConversationsController(AppDbContext db, ChatNotifier notifier) : C
         conversation.Members.First(m => m.UserId == me).LastReadAt = message.CreatedAt; // Kendi mesajın okunmuş sayılır
         await db.SaveChangesAsync();
 
-        var response = new ChatMessageResponse(message.Id, id, me, User.GetDisplayName(), text, message.CreatedAt);
+        var response = new ChatMessageResponse(message.Id, id, me, User.GetDisplayName(), text, message.CreatedAt, null);
         await notifier.MessageSent(conversation.Members.Select(m => m.UserId), response);
+        await notifications.ChatMessage(conversation, message, User.GetDisplayName(), attachment: null);
         return StatusCode(StatusCodes.Status201Created, response);
     }
 
@@ -164,7 +179,16 @@ public class ConversationsController(AppDbContext db, ChatNotifier notifier) : C
         var updated = await db.ConversationMembers
             .Where(m => m.ConversationId == id && m.UserId == me)
             .ExecuteUpdateAsync(s => s.SetProperty(m => m.LastReadAt, DateTime.UtcNow));
-        return updated == 0 ? ConversationNotFound() : NoContent();
+        if (updated == 0) return ConversationNotFound();
+
+        // Sohbeti okuyan, o sohbetin mesaj bildirimlerini de okumuş sayılır (zil rozeti düşsün)
+        var dataFilter = JsonSerializer.Serialize(new Dictionary<string, string> { ["conversationId"] = id.ToString() });
+        var readNotifications = await db.Notifications
+            .Where(n => n.UserId == me && n.ReadAt == null && n.Type == NotificationType.ChatMessage
+                && EF.Functions.JsonContains(n.Data, dataFilter))
+            .ExecuteUpdateAsync(s => s.SetProperty(n => n.ReadAt, DateTime.UtcNow));
+        if (readNotifications > 0) await notifier.NotificationsChanged(me);
+        return NoContent();
     }
 
     [HttpPost("{id:guid}/members")]
@@ -207,9 +231,13 @@ public class ConversationsController(AppDbContext db, ChatNotifier notifier) : C
         var remaining = conversation.Members.Where(m => m.UserId != me).ToList();
         db.ConversationMembers.Remove(mine);
 
+        // Ayrılan kişi artık üye değil; dosya erişimi üyelik kontrolüyle zaten kesilir
+        List<string> filesToDelete = [];
         if (remaining.Count == 0)
         {
-            db.Conversations.Remove(conversation); // Son kişi de çıktı: sohbet ve mesajları silinir
+            // Son kişi de çıktı: sohbet, mesajlar ve ek kayıtları cascade ile silinir; dosyaları biz sileriz
+            filesToDelete = await db.Attachments.Where(a => a.ConversationId == id).Select(a => a.StorageKey).ToListAsync();
+            db.Conversations.Remove(conversation);
         }
         else if (mine.Role == MemberRole.Owner && remaining.All(m => m.Role != MemberRole.Owner))
         {
@@ -217,7 +245,10 @@ public class ConversationsController(AppDbContext db, ChatNotifier notifier) : C
             remaining.OrderBy(m => m.JoinedAt).ThenBy(m => m.UserId).First().Role = MemberRole.Owner;
         }
         await db.SaveChangesAsync();
+        // Kayıtlar silindikten SONRA: silme başarısız olursa dosyalar hâlâ erişilebilir kalırdı
+        foreach (var key in filesToDelete) await storage.DeleteAsync(key);
 
+        conversationPresence.CloseForUser(me, id);
         await notifier.ConversationRemoved(me, id);
         if (remaining.Count > 0) await notifier.ConversationChanged(remaining.Select(m => m.UserId), id);
         return NoContent();

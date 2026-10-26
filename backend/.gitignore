@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Yüklenen sohbet dosyaları (FileStorage:LocalPath) git'e girmez
+App_Data/
+
 # User-specific files
 *.rsuser
 *.suo

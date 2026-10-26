@@ -22,6 +22,48 @@ namespace EkipMeet.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("EkipMeet.Api.Models.Attachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OriginalName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("UploaderId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.HasIndex("UploaderId");
+
+                    b.ToTable("Attachments");
+                });
+
             modelBuilder.Entity("EkipMeet.Api.Models.ChatMessage", b =>
                 {
                     b.Property<long>("Id")
@@ -29,6 +71,9 @@ namespace EkipMeet.Api.Migrations
                         .HasColumnType("bigint");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid?>("AttachmentId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("ConversationId")
                         .HasColumnType("uuid");
@@ -45,6 +90,9 @@ namespace EkipMeet.Api.Migrations
                         .HasColumnType("character varying(1000)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AttachmentId")
+                        .IsUnique();
 
                     b.HasIndex("SenderId");
 
@@ -115,6 +163,40 @@ namespace EkipMeet.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("ConversationMembers");
+                });
+
+            modelBuilder.Entity("EkipMeet.Api.Models.DeviceToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DeviceTokens");
                 });
 
             modelBuilder.Entity("EkipMeet.Api.Models.Meeting", b =>
@@ -194,6 +276,47 @@ namespace EkipMeet.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("MeetingParticipants");
+                });
+
+            modelBuilder.Entity("EkipMeet.Api.Models.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("EkipMeet.Api.Models.RefreshToken", b =>
@@ -325,8 +448,32 @@ namespace EkipMeet.Api.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("EkipMeet.Api.Models.Attachment", b =>
+                {
+                    b.HasOne("EkipMeet.Api.Models.Conversation", "Conversation")
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EkipMeet.Api.Models.User", "Uploader")
+                        .WithMany()
+                        .HasForeignKey("UploaderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+
+                    b.Navigation("Uploader");
+                });
+
             modelBuilder.Entity("EkipMeet.Api.Models.ChatMessage", b =>
                 {
+                    b.HasOne("EkipMeet.Api.Models.Attachment", "Attachment")
+                        .WithMany()
+                        .HasForeignKey("AttachmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("EkipMeet.Api.Models.Conversation", "Conversation")
                         .WithMany("Messages")
                         .HasForeignKey("ConversationId")
@@ -338,6 +485,8 @@ namespace EkipMeet.Api.Migrations
                         .HasForeignKey("SenderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Attachment");
 
                     b.Navigation("Conversation");
 
@@ -374,6 +523,17 @@ namespace EkipMeet.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("EkipMeet.Api.Models.DeviceToken", b =>
+                {
+                    b.HasOne("EkipMeet.Api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("EkipMeet.Api.Models.Meeting", b =>
                 {
                     b.HasOne("EkipMeet.Api.Models.User", "Organizer")
@@ -400,6 +560,17 @@ namespace EkipMeet.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Meeting");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("EkipMeet.Api.Models.Notification", b =>
+                {
+                    b.HasOne("EkipMeet.Api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

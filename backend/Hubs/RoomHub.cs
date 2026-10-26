@@ -36,10 +36,14 @@ public static class RoomHubEvents
     public const string CallAnswer = "CallAnswer";
     public const string CallIceCandidate = "CallIceCandidate";
     public const string CallEnded = "CallEnded";
+
+    // Bildirimler (kişisel gruplara gider)
+    public const string NotificationReceived = "NotificationReceived";
+    public const string NotificationsChanged = "NotificationsChanged"; // Okundu işaretlendi: diğer cihazlar sayacı yenilesin
 }
 
 [Authorize] // Token'sız bağlantı kurulamaz; tüm metotlar giriş ister
-public class RoomHub(AppDbContext db, PresenceTracker presence, CallTracker calls) : Hub
+public class RoomHub(AppDbContext db, PresenceTracker presence, CallTracker calls, ConversationPresence conversations) : Hub
 {
     public const int MaxMessageLength = 1000;
     private const int HistorySize = 50;
@@ -116,6 +120,20 @@ public class RoomHub(AppDbContext db, PresenceTracker presence, CallTracker call
         await Clients.Group(GroupName(roomId)).SendAsync(RoomHubEvents.ReceiveMessage,
             new RoomMessageResponse(message.Id, roomId, message.SenderId, user.GetDisplayName(), message.Text, message.SentAt));
     }
+
+    // ---------- Açık sohbet ekranı ----------
+    // Sohbet ekranı önde açıkken bu sohbetin mesajları için bildirim/push gönderilmez.
+
+    public async Task OpenConversation(Guid conversationId)
+    {
+        var me = Context.User!.GetUserId();
+        // Üye olmadığı bir sohbeti "açık" gösterip başkalarının bildirimlerini etkileyemesin
+        if (!await db.ConversationMembers.AnyAsync(m => m.ConversationId == conversationId && m.UserId == me))
+            throw new HubException("Sohbet bulunamadı.");
+        conversations.Open(Context.ConnectionId, me, conversationId);
+    }
+
+    public void CloseConversation() => conversations.Close(Context.ConnectionId);
 
     // ---------- Görüntülü görüşme ----------
     // Akış: yeni gelen JoinCall ile içeridekilerin listesini alır ve HER birine teklif (offer) yollar;
@@ -243,6 +261,7 @@ public class RoomHub(AppDbContext db, PresenceTracker presence, CallTracker call
         var left = presence.Leave(Context.ConnectionId);
         if (left is { MembersChanged: true }) await NotifyPresence(left.RoomId);
         await LeaveCurrentCall(); // Diğerleri bu kişinin karesini kaldırsın
+        conversations.Close(Context.ConnectionId); // Uygulama kapandı: artık bildirim alsın
         // Kopan bağlantı gruplardan SignalR tarafından zaten çıkarılır
         await base.OnDisconnectedAsync(exception);
     }

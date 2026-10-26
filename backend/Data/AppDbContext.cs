@@ -14,6 +14,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<Meeting> Meetings => Set<Meeting>();
     public DbSet<MeetingParticipant> MeetingParticipants => Set<MeetingParticipant>();
+    public DbSet<Attachment> Attachments => Set<Attachment>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -38,8 +41,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(m => m.Role).HasConversion<string>().HasMaxLength(10);
         });
 
-        // Sayfalama: "bu sohbette şu id'den küçük son 50 mesaj"
-        modelBuilder.Entity<ChatMessage>().HasIndex(m => new { m.ConversationId, m.Id });
+        modelBuilder.Entity<ChatMessage>(e =>
+        {
+            // Sayfalama: "bu sohbette şu id'den küçük son 50 mesaj"
+            e.HasIndex(m => new { m.ConversationId, m.Id });
+            e.HasIndex(m => m.AttachmentId).IsUnique(); // Bir dosya tek bir mesaja ait
+            // Ek ile mesaj aynı sohbette; sohbet silinince ikisi de cascade ile gider
+            e.HasOne(m => m.Attachment).WithMany().HasForeignKey(m => m.AttachmentId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Attachment>(e =>
+        {
+            e.HasIndex(a => a.ConversationId);
+            e.HasOne(a => a.Uploader).WithMany().HasForeignKey(a => a.UploaderId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Notification>(e =>
+        {
+            e.Property(n => n.Type).HasConversion<string>().HasMaxLength(20);
+            e.Property(n => n.Data).HasColumnType("jsonb"); // İçinde arama yapılabilsin (sohbet okununca bildirimleri de okundu say)
+            e.HasIndex(n => new { n.UserId, n.CreatedAt }); // "Benim bildirimlerim, yeniden eskiye"
+        });
+
+        modelBuilder.Entity<DeviceToken>(e =>
+        {
+            e.HasIndex(d => d.Token).IsUnique();
+            e.HasIndex(d => d.UserId);
+        });
 
         modelBuilder.Entity<Meeting>(e =>
         {

@@ -21,4 +21,8 @@ public class ChatNotifier(IHubContext<RoomHub> hub)
     // Kullanıcı artık bu sohbetin üyesi değil: listesinden kaldırsın, açık ekranı kapatsın
     public Task ConversationRemoved(Guid userId, Guid conversationId) =>
         hub.Clients.Group(RoomHub.UserGroup(userId)).SendAsync(RoomHubEvents.ConversationRemoved, conversationId);
+
+    // Bildirimler okundu işaretlendi: kullanıcının diğer cihazları zil rozetini yenilesin
+    public Task NotificationsChanged(Guid userId) =>
+        hub.Clients.Group(RoomHub.UserGroup(userId)).SendAsync(RoomHubEvents.NotificationsChanged);
 }

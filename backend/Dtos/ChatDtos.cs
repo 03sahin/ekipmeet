@@ -6,7 +6,17 @@ namespace EkipMeet.Api.Dtos;
 // Aramada sadece id + ad döner; e-posta gibi kişisel bilgiler sızmasın
 public record UserSummary(Guid Id, string DisplayName);
 
-public record LastMessagePreview(Guid SenderId, string SenderName, string Text, DateTime CreatedAt);
+// Dosyanın kendisi değil bilgisi; indirmek için GET /api/attachments/{Id}
+public record AttachmentResponse(Guid Id, string OriginalName, string ContentType, long SizeBytes, bool IsImage);
+
+// Ekli son mesajda liste "📷 Fotoğraf" / "📎 dosya-adı" gösterir
+public record LastMessagePreview(
+    Guid SenderId,
+    string SenderName,
+    string Text,
+    DateTime CreatedAt,
+    string? AttachmentName,
+    bool AttachmentIsImage);
 
 // Sohbet listesindeki bir satır
 public record ConversationSummary(
@@ -33,7 +43,8 @@ public record ChatMessageResponse(
     Guid SenderId,
     string SenderName,
     string Text,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    AttachmentResponse? Attachment);
 
 public class CreateDirectRequest
 {
