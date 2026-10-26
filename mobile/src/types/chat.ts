@@ -11,6 +11,17 @@ export type LastMessagePreview = {
   senderName: string;
   text: string;
   createdAt: string;
+  attachmentName: string | null; // Ekli mesajsa dosya adı
+  attachmentIsImage: boolean;
+};
+
+// Mesaj eki; dosyanın kendisi GET /api/attachments/{id} ile (token'la) indirilir
+export type AttachmentInfo = {
+  id: string;
+  originalName: string;
+  contentType: string;
+  sizeBytes: number;
+  isImage: boolean;
 };
 
 // Sohbet listesindeki bir satır
@@ -45,6 +56,7 @@ export type ConversationMessage = {
   conversationId: string;
   senderId: string;
   senderName: string;
-  text: string;
+  text: string; // Ekli mesajda boş olabilir
   createdAt: string;
+  attachment: AttachmentInfo | null;
 };

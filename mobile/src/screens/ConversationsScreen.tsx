@@ -62,7 +62,14 @@ export default function ConversationsScreen({ navigation }: Props) {
         if (!current) return prev;
         const updated: ConversationSummary = {
           ...current,
-          lastMessage: { senderId: m.senderId, senderName: m.senderName, text: m.text, createdAt: m.createdAt },
+          lastMessage: {
+            senderId: m.senderId,
+            senderName: m.senderName,
+            text: m.text,
+            createdAt: m.createdAt,
+            attachmentName: m.attachment?.originalName ?? null,
+            attachmentIsImage: m.attachment?.isImage ?? false,
+          },
           lastMessageAt: m.createdAt,
           unreadCount: m.senderId === user?.id ? current.unreadCount : current.unreadCount + 1,
         };
@@ -102,7 +109,9 @@ export default function ConversationsScreen({ navigation }: Props) {
     if (!c.lastMessage) return c.type === 'Group' ? 'Grup oluşturuldu' : 'Henüz mesaj yok';
     const prefix =
       c.lastMessage.senderId === user?.id ? 'Sen: ' : c.type === 'Group' ? `${c.lastMessage.senderName}: ` : '';
-    return prefix + c.lastMessage.text;
+    const { attachmentName, attachmentIsImage, text } = c.lastMessage;
+    const body = attachmentName ? (attachmentIsImage ? '📷 Fotoğraf' : `📎 ${attachmentName}`) : text;
+    return prefix + body;
   }
 
   return (

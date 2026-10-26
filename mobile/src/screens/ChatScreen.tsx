@@ -1,7 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,17 +18,40 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  formatFileSize,
+  MAX_ATTACHMENT_BYTES,
+  PickedFile,
+  uploadAttachment,
+  UploadProgress,
+} from '../api/attachments';
 import { getConversation, getMessages, markRead, MESSAGE_PAGE_SIZE, sendMessage } from '../api/chat';
 import { getErrorMessage } from '../api/errors';
 import { useAuth } from '../auth/AuthContext';
+import AttachmentCard from '../components/chat/AttachmentCard';
+import AttachmentSheet, { AttachmentSource } from '../components/chat/AttachmentSheet';
+import AuthorizedImage from '../components/chat/AuthorizedImage';
 import { RootStackParamList } from '../navigation/types';
-import { connectRoomHub, onHubEvent, onReconnected } from '../realtime/roomHub';
+import { closeConversation, connectRoomHub, onHubEvent, onReconnected, openConversation } from '../realtime/roomHub';
 import { ConversationDetail, ConversationMessage } from '../types/chat';
 import { formatTime, mergeById } from '../utils/format';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chat'>;
 
 const MAX_LENGTH = 1000; // Backend'deki sınırla aynı
+
+// Belge seçicide gösterilecek türler (asıl kontrol backend'de dosya imzasıyla yapılır)
+const DOCUMENT_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+  'application/zip',
+  'image/*',
+];
+
+type UploadState = { name: string; progress: UploadProgress | null };
 
 export default function ChatScreen({ route, navigation }: Props) {
   const { conversationId } = route.params;
@@ -42,6 +67,9 @@ export default function ChatScreen({ route, navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [upload, setUpload] = useState<UploadState | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const isGroup = detail?.type === 'Group';
 
@@ -104,18 +132,25 @@ export default function ChatScreen({ route, navigation }: Props) {
       // Gruptan ayrıldık (bu cihazdan ya da başka cihazdan): sohbet ekranında kalmanın anlamı yok
       if (id === conversationId && navigation.canGoBack()) navigation.popToTop();
     });
-    // Kopukken kaçırdığımız mesajları al
+    // Kopukken kaçırdığımız mesajları al; yeni bağlantıda "sohbet açık" bilgisini tekrar ver
     const offReconnected = onReconnected(() => {
       getMessages(conversationId)
         .then((page) => setMessages((prev) => mergeById(prev, page)))
         .catch(() => {});
       read();
+      if (AppState.currentState === 'active') openConversation(conversationId);
     });
-    // Arka plandan dönünce o arada gelenleri okundu say
+    // Arka plandan dönünce o arada gelenleri okundu say. Arka planda sohbet "açık" sayılmasın: bildirim gelsin.
     const appState = AppState.addEventListener('change', (state) => {
-      if (state === 'active') read();
+      if (state === 'active') {
+        read();
+        openConversation(conversationId);
+      } else if (state === 'background') {
+        closeConversation();
+      }
     });
     connectRoomHub().catch(() => {});
+    openConversation(conversationId);
 
     return () => {
       offMessage();
@@ -123,6 +158,7 @@ export default function ChatScreen({ route, navigation }: Props) {
       offRemoved();
       offReconnected();
       appState.remove();
+      closeConversation();
     };
   }, [conversationId, user?.id, read, loadDetail, navigation]);
 
@@ -152,6 +188,68 @@ export default function ChatScreen({ route, navigation }: Props) {
       Alert.alert('Gönderilemedi', getErrorMessage(e)); // Yazılan metin silinmez, tekrar denenebilir
     } finally {
       setSending(false);
+    }
+  }
+
+  // Ekrandan çıkılırsa süren yükleme iptal edilsin
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  async function pickFile(source: AttachmentSource): Promise<PickedFile | null> {
+    if (source === 'document') {
+      const result = await DocumentPicker.getDocumentAsync({ type: DOCUMENT_TYPES, copyToCacheDirectory: true });
+      if (result.canceled) return null;
+      const a = result.assets[0];
+      return { uri: a.uri, name: a.name, mimeType: a.mimeType, size: a.size };
+    }
+
+    if (source === 'camera') {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Kamera izni gerekli', 'Fotoğraf çekmek için Ayarlar > İzinler bölümünden kamerayı aç.');
+        return null;
+      }
+    }
+    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.8 };
+    const result =
+      source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+    if (result.canceled) return null;
+    const a = result.assets[0];
+    const extension = a.mimeType === 'image/png' ? 'png' : a.mimeType === 'image/webp' ? 'webp' : 'jpg';
+    return { uri: a.uri, name: a.fileName ?? `foto-${Date.now()}.${extension}`, mimeType: a.mimeType, size: a.fileSize };
+  }
+
+  async function sendAttachment(source: AttachmentSource) {
+    if (upload) return;
+    let picked: PickedFile | null;
+    try {
+      picked = await pickFile(source);
+    } catch (e) {
+      Alert.alert('Dosya seçilemedi', getErrorMessage(e));
+      return;
+    }
+    if (!picked) return;
+    if (picked.size && picked.size > MAX_ATTACHMENT_BYTES) {
+      Alert.alert('Dosya çok büyük', `Seçtiğin dosya ${formatFileSize(picked.size)}. En fazla 10 MB gönderebilirsin.`);
+      return;
+    }
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setUpload({ name: picked.name, progress: null });
+    try {
+      // Kutuda yazılı metin varsa dosyanın açıklaması olarak gider
+      const message = await uploadAttachment(conversationId, picked, {
+        text: text.trim() || undefined,
+        signal: controller.signal,
+        onProgress: (progress) => setUpload((u) => (u ? { ...u, progress } : u)),
+      });
+      setMessages((prev) => mergeById(prev, [message]));
+      setText('');
+    } catch (e) {
+      if (!controller.signal.aborted) Alert.alert('Gönderilemedi', getErrorMessage(e)); // İptal hata sayılmaz
+    } finally {
+      abortRef.current = null;
+      setUpload(null);
     }
   }
 
@@ -198,10 +296,21 @@ export default function ChatScreen({ route, navigation }: Props) {
             // Grupta, art arda aynı kişinin mesajlarında adı sadece ilkinde göster
             const previous = reversed[index + 1];
             const showName = isGroup && !mine && previous?.senderId !== item.senderId;
+            const attachment = item.attachment;
             return (
               <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
                 {showName && <Text style={styles.sender}>{item.senderName}</Text>}
-                <Text style={styles.text}>{item.text}</Text>
+                {attachment?.isImage && (
+                  <Pressable
+                    onPress={() =>
+                      navigation.navigate('ImageViewer', { attachmentId: attachment.id, name: attachment.originalName })
+                    }
+                  >
+                    <AuthorizedImage attachmentId={attachment.id} style={styles.imagePreview} resizeMode="cover" />
+                  </Pressable>
+                )}
+                {attachment && !attachment.isImage && <AttachmentCard attachment={attachment} />}
+                {item.text.length > 0 && <Text style={[styles.text, attachment && styles.caption]}>{item.text}</Text>}
                 <Text style={styles.time}>{formatTime(item.createdAt)}</Text>
               </View>
             );
@@ -209,7 +318,39 @@ export default function ChatScreen({ route, navigation }: Props) {
         />
       )}
 
+      {upload && (
+        <View style={styles.uploadBar}>
+          <Ionicons name="cloud-upload-outline" size={20} color="#16a34a" />
+          <View style={styles.uploadInfo}>
+            <Text style={styles.uploadName} numberOfLines={1}>
+              {upload.name}
+            </Text>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${upload.progress && upload.progress.total > 0 ? Math.min(100, (upload.progress.sent / upload.progress.total) * 100) : 0}%`,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+          <Pressable onPress={() => abortRef.current?.abort()} hitSlop={8} accessibilityLabel="Yüklemeyi iptal et">
+            <Ionicons name="close-circle" size={24} color="#dc2626" />
+          </Pressable>
+        </View>
+      )}
+
       <View style={[styles.inputBar, { paddingBottom: 8 + insets.bottom }]}>
+        <Pressable
+          style={[styles.attachButton, upload && styles.sendDisabled]}
+          onPress={() => setSheetVisible(true)}
+          disabled={!!upload}
+          accessibilityLabel="Dosya ekle"
+        >
+          <Ionicons name="attach" size={24} color="#4b5563" />
+        </Pressable>
         <TextInput
           style={styles.input}
           value={text}
@@ -226,6 +367,8 @@ export default function ChatScreen({ route, navigation }: Props) {
           <Ionicons name="send" size={20} color="#fff" />
         </Pressable>
       </View>
+
+      <AttachmentSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} onSelect={sendAttachment} />
     </KeyboardAvoidingView>
   );
 }
@@ -249,6 +392,23 @@ const styles = StyleSheet.create({
   bubbleOther: { alignSelf: 'flex-start', backgroundColor: '#fff', borderTopLeftRadius: 2 },
   sender: { fontSize: 13, fontWeight: '700', color: '#16a34a', marginBottom: 2 },
   text: { color: '#111827', fontSize: 15 },
+  caption: { marginTop: 6 },
+  imagePreview: { width: 220, height: 220, borderRadius: 8, backgroundColor: '#e5e7eb' },
+  uploadBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 8,
+    marginTop: 6,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+  },
+  uploadInfo: { flex: 1 },
+  uploadName: { fontSize: 13, color: '#111827', marginBottom: 6 },
+  progressTrack: { height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', overflow: 'hidden' },
+  progressFill: { height: 4, backgroundColor: '#16a34a' },
+  attachButton: { width: 40, height: 44, justifyContent: 'center', alignItems: 'center' },
   time: { fontSize: 11, color: '#6b7280', marginTop: 2, alignSelf: 'flex-end' },
   inputBar: {
     flexDirection: 'row',

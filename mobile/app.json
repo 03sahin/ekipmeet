@@ -9,7 +9,8 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ekipmeet.app"
+      "bundleIdentifier": "com.ekipmeet.app",
+      "bitcode": false
     },
     "android": {
       "package": "com.ekipmeet.app",
@@ -19,12 +20,16 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.SCHEDULE_EXACT_ALARM"
       ],
-      "blockedPermissions": ["android.permission.SYSTEM_ALERT_WINDOW"],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -41,7 +46,27 @@
           "cameraPermission": "Görüntülü görüşmede seni gösterebilmek için kameraya erişim gerekiyor.",
           "microphonePermission": "Görüntülü görüşmede konuşabilmen için mikrofona erişim gerekiyor."
         }
+      ],
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Sohbete fotoğraf gönderebilmek için galerine erişim gerekiyor.",
+          "cameraPermission": "Sohbete fotoğraf çekip gönderebilmek için kameraya erişim gerekiyor."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#16a34a"
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "32c999fc-a8d7-4e00-80a1-4ccbc61f6aeb"
+      }
+    },
+    "owner": "al3ay"
   }
 }

@@ -69,6 +69,19 @@ export function leaveRoom() {
   }
 }
 
+// Sohbet ekranı önde açıkken sunucu o sohbetin mesajları için bildirim göndermez
+export function openConversation(conversationId: string) {
+  connectRoomHub()
+    .then((conn) => conn.invoke('OpenConversation', conversationId))
+    .catch(() => {});
+}
+
+export function closeConversation() {
+  if (connection?.state === HubConnectionState.Connected) {
+    connection.invoke('CloseConversation').catch(() => {});
+  }
+}
+
 // Görüşme ekranından çıkarken; bağlantı yoksa sunucu kopunca zaten çıkarır
 export function leaveCall() {
   if (connection?.state === HubConnectionState.Connected) {

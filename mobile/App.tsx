@@ -4,18 +4,24 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
+import NotificationBell from './src/components/NotificationBell';
+import { navigationRef } from './src/navigation/navigationRef';
 import { AuthStackParamList, RootStackParamList, TabParamList } from './src/navigation/types';
+import { NotificationsProvider } from './src/notifications/NotificationsContext';
 import CallScreen from './src/screens/CallScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import ConversationsScreen from './src/screens/ConversationsScreen';
 import GroupInfoScreen from './src/screens/GroupInfoScreen';
+import ImageViewerScreen from './src/screens/ImageViewerScreen';
 import InstantMeetingScreen from './src/screens/InstantMeetingScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import MeetingDetailScreen from './src/screens/MeetingDetailScreen';
 import MeetingFormScreen from './src/screens/MeetingFormScreen';
 import MeetingsScreen from './src/screens/MeetingsScreen';
 import NewChatScreen from './src/screens/NewChatScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import RoomDetailScreen from './src/screens/RoomDetailScreen';
 import RoomFormScreen from './src/screens/RoomFormScreen';
@@ -35,10 +41,19 @@ function LogoutButton() {
   );
 }
 
-// Alt sekmeler: her sekmenin kendi üst çubuğu var, çıkış butonu ikisinde de
+function HeaderActions() {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <NotificationBell />
+      <LogoutButton />
+    </View>
+  );
+}
+
+// Alt sekmeler: her sekmenin kendi üst çubuğu var; zil ve çıkış butonu hepsinde
 function MainTabs() {
   return (
-    <Tabs.Navigator screenOptions={{ headerRight: () => <LogoutButton /> }}>
+    <Tabs.Navigator screenOptions={{ headerRight: () => <HeaderActions /> }}>
       <Tabs.Screen
         name="Rooms"
         component={RoomsScreen}
@@ -124,6 +139,12 @@ function RootNavigator() {
         component={CallScreen}
         options={{ headerShown: false, statusBarStyle: 'light', gestureEnabled: false }}
       />
+      <AppStack.Screen
+        name="ImageViewer"
+        component={ImageViewerScreen}
+        options={{ headerShown: false, statusBarStyle: 'light', animation: 'fade' }}
+      />
+      <AppStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Bildirimler' }} />
     </AppStack.Navigator>
   ) : (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
@@ -135,11 +156,16 @@ function RootNavigator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NavigationContainer>
-        <RootNavigator />
-      </NavigationContainer>
-      <StatusBar style="auto" />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        {/* Bildirimler navigasyonun dışında: banner her ekranın üstünde, dokununca navigationRef ile gidilir */}
+        <NotificationsProvider>
+          <NavigationContainer ref={navigationRef}>
+            <RootNavigator />
+          </NavigationContainer>
+        </NotificationsProvider>
+        <StatusBar style="auto" />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

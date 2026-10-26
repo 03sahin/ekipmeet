@@ -1,5 +1,7 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { apiFetch, setAccessToken, setSessionExpiredHandler } from '../api/client';
+import { cancelAllMeetingReminders } from '../notifications/meetingReminders';
+import { unregisterPush } from '../notifications/push';
 import { stopRoomHub } from '../realtime/roomHub';
 import { AuthResponse, User } from '../types/auth';
 import * as tokenStorage from './tokenStorage';
@@ -23,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setSessionExpiredHandler(() => {
       stopRoomHub();
+      cancelAllMeetingReminders().catch(() => {});
       setUser(null);
     });
 
@@ -63,6 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
+    // Oturum hâlâ geçerliyken: bu cihazın push token'ını sil ve hatırlatıcıları kaldır (başka hesap girerse ona gitmesin)
+    await unregisterPush();
+    await cancelAllMeetingReminders().catch(() => {});
     const refreshToken = await tokenStorage.getRefreshToken();
     if (refreshToken) {
       // Sunucuda iptal et; ağ hatası olsa bile cihazdan çıkış yapılsın

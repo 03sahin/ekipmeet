@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "103844447582",
+    "project_id": "ekipmeet",
+    "storage_bucket": "ekipmeet.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:103844447582:android:b1c452b3767ab73e6dbbcf",
+        "android_client_info": {
+          "package_name": "com.ekipmeet.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAoJLlHM3CLfYmBd5PcSEGq4v00AVDJ1F0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

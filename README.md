@@ -48,6 +48,23 @@ npx expo start --dev-client   # ya da: npm start
 Ardından cihazda **EkipMeet** uygulamasını aç; Metro'ya kendisi bağlanır (bağlanmazsa terminalde `a` tuşu
 ya da uygulamadaki listeden sunucuyu seç). USB'li telefonda `adb reverse tcp:8081 tcp:8081` Metro bağlantısını kolaylaştırır.
 
+## Dosyalar (sohbet ekleri)
+
+Yüklenen dosyalar `backend/appsettings.json` → `FileStorage:LocalPath` klasörüne (varsayılan `backend/App_Data/uploads`)
+rastgele Guid adlarıyla kaydedilir. Bu klasör web kökü dışındadır ve git'e girmez. Dosyalar sadece
+`GET /api/attachments/{id}` ile, o sohbetin üyesi olan kullanıcıya verilir. Bulut depolamaya geçmek için
+`IFileStorage`'ın yeni bir implementasyonu yazılıp `Program.cs`'te kaydedilmesi yeterlidir.
+
+## Bildirimler ve push
+
+- Uygulama içi bildirimler her zaman çalışır (veritabanı + SignalR).
+- Push, Expo Push API üzerinden gider; Android'de Expo, FCM'e iletir. Gerekenler:
+  - `mobile/app.json` → `extra.eas.projectId` (`npx eas-cli@latest init` ile eklenir)
+  - `mobile/google-services.json` (Firebase konsolundan; git'e girebilir, gizli anahtar değildir)
+  - FCM V1 servis hesabı anahtarı **Expo'ya** yüklenir (`npx eas-cli@latest credentials`). Bu JSON gizlidir, **repoya konmaz**.
+- Push'u kapatmak için: `Push:Enabled = false`. Expo hesabında push güvenliği açılırsa erişim token'ı User Secrets'a eklenir:
+  `dotnet user-secrets set "Push:ExpoAccessToken" "<token>"`
+
 ## Görüntülü görüşme ve ICE sunucuları
 
 ICE sunucuları `backend/appsettings.json` → `WebRtc:IceServers` bölümünden okunur ve mobil uygulamaya
