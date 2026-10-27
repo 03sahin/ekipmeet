@@ -1,0 +1,45 @@
+# EAS Build'e yüklenecek arşivden hariç tutulanlar.
+# EAS bu dosyayı SADECE git deposunun kökünden okur (monorepoda mobile/ değil burası) ve dosya varsa
+# .gitignore yerine bunu kullanır; bu yüzden git'in zaten dışladıkları da burada tekrar yazılır.
+
+# Mobil derlemeye gerekmeyen her şey: backend, testler, CI, solution
+/backend/
+/backend.Tests/
+/.github/
+/ekipmeet.slnx
+/.vscode/
+/.claude/
+
+# Bağımlılıklar ve üretilen native projeler (EAS kendisi kurar ve prebuild yapar)
+node_modules/
+/mobile/android/
+/mobile/ios/
+/mobile/.expo/
+/mobile/dist/
+/mobile/web-build/
+/mobile/expo-env.d.ts
+
+# Yerel ortam dosyaları: backend adresi eas.json'daki env'den gelir
+.env
+.env*.local
+
+# Derleme çıktıları, imzalama dosyaları ve hata ayıklama kalıntıları
+*.apk
+*.aab
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+*.orig.*
+*.tsbuildinfo
+.kotlin/
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+.DS_Store
+Thumbs.db

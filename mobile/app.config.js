@@ -6,10 +6,27 @@
 // (Development build'in debug manifest'i zaten HTTP'ye izin verir, burada bir şey gerekmez.)
 const allowHttp = process.env.EKIPMEET_ALLOW_HTTP === 'true';
 
+// Release derlemede R8 kodu küçültür. WebRTC'nin Java sınıfları native (JNI) koddan isimleriyle çağrıldığı
+// için silinmemeli/yeniden adlandırılmamalı; isteğe bağlı codec'lerin (örn. Dav1dDecoder) eksik sınıfları da
+// hata değil, sadece uyarı olmalı.
+const proguardRules = `
+-keep class org.webrtc.** { *; }
+-dontwarn org.webrtc.**
+-keep class com.oney.WebRTCModule.** { *; }
+`;
+
 module.exports = ({ config }) => ({
   ...config,
   plugins: [
     ...config.plugins,
-    ['expo-build-properties', { android: { usesCleartextTraffic: allowHttp } }],
+    [
+      'expo-build-properties',
+      {
+        android: {
+          usesCleartextTraffic: allowHttp,
+          extraProguardRules: proguardRules,
+        },
+      },
+    ],
   ],
 });
