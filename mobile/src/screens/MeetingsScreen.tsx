@@ -41,6 +41,12 @@ export default function MeetingsScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now()); // "Şu an sürüyor" şeridi için; dakikada bir güncellenir
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Olay dinleyicileri hangi ayın açık olduğunu bilsin diye ref (state closure'da eski kalırdı)
   const monthRef = useRef(today.slice(0, 8) + '01');
@@ -192,7 +198,7 @@ export default function MeetingsScreen({ navigation }: Props) {
               )}
             </View>
           }
-          renderItem={({ item }) => <MeetingListItem meeting={item} onPress={() => openMeeting(item)} />}
+          renderItem={({ item }) => <MeetingListItem meeting={item} now={now} onPress={() => openMeeting(item)} />}
         />
       ) : (
         <SectionList
@@ -210,7 +216,7 @@ export default function MeetingsScreen({ navigation }: Props) {
           }
           ListEmptyComponent={<Text style={styles.empty}>Yaklaşan toplantın yok.</Text>}
           renderSectionHeader={({ section }) => <Text style={styles.sectionTitle}>{section.title}</Text>}
-          renderItem={({ item }) => <MeetingListItem meeting={item} onPress={() => openMeeting(item)} />}
+          renderItem={({ item }) => <MeetingListItem meeting={item} now={now} onPress={() => openMeeting(item)} />}
         />
       )}
 

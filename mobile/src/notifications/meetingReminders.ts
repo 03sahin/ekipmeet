@@ -64,8 +64,8 @@ async function doSync() {
       new Date(m.startsAt).getTime() - REMIND_BEFORE_MS > now
   );
 
-  // İzin yoksa da kurarız (yaklaşık zamanlı); hiç gelmemesinden iyidir
-  const exact = wanted.length > 0 ? await ensureExactAlarmPermission() : true;
+  // İzin verilmese de kurarız (yaklaşık zamanlı); hiç gelmemesinden iyidir
+  if (wanted.length > 0) await ensureExactAlarmPermission();
 
   await cancelAllMeetingReminders();
   for (const m of wanted) {
@@ -83,21 +83,6 @@ async function doSync() {
         channelId: MEETING_CHANNEL,
       },
     });
-  }
-
-  // Geliştirme sırasında Metro terminalinde: hangi hatırlatıcılar, hangi saate kuruldu
-  if (__DEV__) {
-    const scheduled = (await Notifications.getAllScheduledNotificationsAsync()).filter((n) =>
-      n.identifier.startsWith(PREFIX)
-    );
-    console.log(
-      `[Hatırlatıcı] ${scheduled.length} adet planlı (tam zamanlı alarm izni: ${exact ? 'var' : 'YOK'})`,
-      scheduled.map((n) => {
-        const trigger = n.trigger as { value?: number; timestamp?: number; date?: number };
-        const at = trigger.value ?? trigger.timestamp ?? trigger.date;
-        return `${n.content.title} → ${at ? new Date(at).toLocaleString('tr-TR') : JSON.stringify(n.trigger)}`;
-      })
-    );
   }
 }
 

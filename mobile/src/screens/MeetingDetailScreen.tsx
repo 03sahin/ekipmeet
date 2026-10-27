@@ -34,7 +34,7 @@ export default function MeetingDetailScreen({ route, navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
 
   const load = useCallback(() => {
     getMeeting(meetingId)

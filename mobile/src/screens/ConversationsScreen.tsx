@@ -28,7 +28,9 @@ export default function ConversationsScreen({ navigation }: Props) {
 
   // Olay dinleyicisi içinden güncel listeye bakabilmek için
   const conversationsRef = useRef(conversations);
-  conversationsRef.current = conversations;
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   const load = useCallback(async () => {
     try {

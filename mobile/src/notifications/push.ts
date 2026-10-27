@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
+import { AndroidImportance } from 'expo-notifications';
 import { Platform } from 'react-native';
 import { registerDevice, unregisterDevice } from '../api/notifications';
 
@@ -24,11 +25,11 @@ export async function configureNotifications() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(DEFAULT_CHANNEL, {
       name: 'Mesajlar ve toplantılar',
-      importance: Notifications.AndroidImportance.HIGH,
+      importance: AndroidImportance.HIGH,
     });
     await Notifications.setNotificationChannelAsync(MEETING_CHANNEL, {
       name: 'Toplantı hatırlatıcıları',
-      importance: Notifications.AndroidImportance.HIGH,
+      importance: AndroidImportance.HIGH,
     });
   }
 }

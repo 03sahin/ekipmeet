@@ -34,8 +34,6 @@ export default function CallScreen({ route, navigation }: Props) {
   useEffect(() => {
     let active = true;
     let session: CallSession | null = null;
-    setStatus({ kind: 'starting' });
-    setSnapshot(null);
 
     (async () => {
       const permission = await requestCallPermissions();
@@ -84,6 +82,13 @@ export default function CallScreen({ route, navigation }: Props) {
 
   const leave = () => navigation.goBack(); // Temizliği useEffect'in dönüşü yapar
 
+  // Ekranı başa döndürüp effect'i yeniden çalıştırır (izin ya da katılma hatasından sonra)
+  function retry() {
+    setStatus({ kind: 'starting' });
+    setSnapshot(null);
+    setAttempt((a) => a + 1);
+  }
+
   if (status.kind === 'denied') {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
@@ -95,7 +100,7 @@ export default function CallScreen({ route, navigation }: Props) {
             : 'Görüntülü görüşmeye katılmak için kamera ve mikrofon iznini vermelisin.'}
         </Text>
         {status.blocked && <MessageButton label="Ayarları aç" onPress={() => Linking.openSettings()} primary />}
-        <MessageButton label="Tekrar dene" onPress={() => setAttempt((a) => a + 1)} primary={!status.blocked} />
+        <MessageButton label="Tekrar dene" onPress={retry} primary={!status.blocked} />
         <MessageButton label="Geri dön" onPress={leave} />
       </View>
     );
@@ -107,7 +112,7 @@ export default function CallScreen({ route, navigation }: Props) {
         <Ionicons name="alert-circle" size={48} color="#f87171" />
         <Text style={styles.messageTitle}>Görüşmeye katılınamadı</Text>
         <Text style={styles.message}>{status.message}</Text>
-        <MessageButton label="Tekrar dene" onPress={() => setAttempt((a) => a + 1)} primary />
+        <MessageButton label="Tekrar dene" onPress={retry} primary />
         <MessageButton label="Geri dön" onPress={leave} />
       </View>
     );

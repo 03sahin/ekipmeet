@@ -21,18 +21,23 @@ export default function UserSearch({ onSelect, selectedIds = [], excludeIds = []
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Ekranda hemen değişecek durumlar yazarken ayarlanır; effect sadece aramayı yapar
+  function changeQuery(text: string) {
+    setQuery(text);
+    const short = text.trim().length < 2;
+    if (short) {
+      setResults([]);
+      setError(null);
+    }
+    setLoading(!short);
+  }
+
   // Debounce: her harfte değil, yazmayı 300 ms bırakınca ara
   useEffect(() => {
     const q = query.trim();
-    if (q.length < 2) {
-      setResults([]);
-      setError(null);
-      setLoading(false);
-      return;
-    }
+    if (q.length < 2) return;
 
     let cancelled = false; // Eski bir aramanın cevabı yenisinin üstüne yazmasın
-    setLoading(true);
     const timer = setTimeout(() => {
       searchUsers(q)
         .then((users) => {
@@ -63,7 +68,7 @@ export default function UserSearch({ onSelect, selectedIds = [], excludeIds = []
       <TextInput
         style={styles.input}
         value={query}
-        onChangeText={setQuery}
+        onChangeText={changeQuery}
         placeholder={placeholder ?? 'İsimle ara...'}
         autoFocus={autoFocus}
         autoCorrect={false}

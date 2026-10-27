@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,7 +12,7 @@ const VISIBLE_MS = 4000;
 // Uygulama açıkken gelen bildirim: sistem bildirimi yerine üstten kayan kısa şerit
 export default function InAppBanner({ content, onPress, onHide }: Props) {
   const insets = useSafeAreaInsets();
-  const translateY = useRef(new Animated.Value(-150)).current;
+  const [translateY] = useState(() => new Animated.Value(-150)); // Bir kez oluşturulan animasyon değeri
 
   useEffect(() => {
     if (!content) return;

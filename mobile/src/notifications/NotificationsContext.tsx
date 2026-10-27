@@ -79,10 +79,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    if (!user) {
-      setUnreadCount(0);
-      return;
-    }
+    if (!user) return; // Çıkış yapılınca sayaç aşağıda 0 gösterilir
 
     refreshUnread();
     registerForPush();
@@ -151,7 +148,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <NotificationsContext.Provider value={{ unreadCount, refreshUnread, markRead, markAllRead }}>
+    <NotificationsContext.Provider value={{ unreadCount: user ? unreadCount : 0, refreshUnread, markRead, markAllRead }}>
       {children}
       <InAppBanner content={banner} onPress={pressBanner} onHide={hideBanner} />
     </NotificationsContext.Provider>

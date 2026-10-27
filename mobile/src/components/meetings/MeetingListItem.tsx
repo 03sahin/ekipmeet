@@ -5,12 +5,12 @@ import { formatClock } from '../../utils/date';
 import StatusTag from './StatusTag';
 import { MEETING } from './theme';
 
-type Props = { meeting: MeetingSummary; onPress: () => void };
+// now dışarıdan gelir: render saf kalsın, liste ekranı saati kendi zamanlayıcısıyla günceller
+type Props = { meeting: MeetingSummary; now: number; onPress: () => void };
 
 // Takvim/ajanda satırı: solda saat sütunu, renkli şerit, sağda başlık ve durum
-export default function MeetingListItem({ meeting, onPress }: Props) {
+export default function MeetingListItem({ meeting, now, onPress }: Props) {
   const cancelled = meeting.status === 'Cancelled';
-  const now = Date.now();
   const live = !cancelled && new Date(meeting.startsAt).getTime() <= now && new Date(meeting.endsAt).getTime() > now;
 
   return (
