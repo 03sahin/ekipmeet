@@ -1,0 +1,58 @@
+name: CI
+
+# Her push ve pull request'te backend derlenip test edilir, mobil kod tip ve lint kontrolünden geçer
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (build + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore ekipmeet.slnx
+
+      - name: Build
+        run: dotnet build ekipmeet.slnx --no-restore --configuration Release
+
+      # Ubuntu runner'da Docker var: testler Testcontainers ile gerçek PostgreSQL'de koşar
+      - name: Test
+        run: dotnet test ekipmeet.slnx --no-build --configuration Release --logger "console;verbosity=normal"
+
+  mobile:
+    name: Mobil (tsc + eslint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npx expo lint
