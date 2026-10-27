@@ -6,6 +6,7 @@ using EkipMeet.Api.Services;
 using EkipMeet.Api.Services.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 
@@ -28,6 +29,7 @@ public class AttachmentsController(
     // Dosya yüklenir ve aynı istekte ekli bir mesaj oluşturulur: yarıda kalan/sahipsiz dosya oluşmaz.
     // Form alanları: file (zorunlu), text (isteğe bağlı açıklama)
     [HttpPost("api/conversations/{id:guid}/attachments")]
+    [EnableRateLimiting(RateLimitPolicies.Upload)]
     [RequestSizeLimit(MaxRequestBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxRequestBytes)]
     public async Task<ActionResult<ChatMessageResponse>> Upload(Guid id, IFormFile? file, [FromForm] string? text,

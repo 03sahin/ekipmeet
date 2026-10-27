@@ -1,12 +1,13 @@
 using EkipMeet.Api.Data;
 using EkipMeet.Api.Dtos;
+using EkipMeet.Api.Extensions;
 using EkipMeet.Api.Models;
 using EkipMeet.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace EkipMeet.Api.Controllers;
 
@@ -14,37 +15,56 @@ namespace EkipMeet.Api.Controllers;
 [Route("api/auth")]
 public class AuthController(AppDbContext db, TokenService tokens, IConfiguration config) : ControllerBase
 {
-    private readonly PasswordHasher<User> _hasher = new(); // PBKDF2 + salt ile güvenli hash
+    private static readonly PasswordHasher<User> Hasher = new(); // PBKDF2 + salt ile güvenli hash
+
+    // Kullanıcı bulunamadığında da bir hash doğrulaması yapılır; yoksa "yok" yanıtı belirgin şekilde
+    // hızlı döner ve süreye bakarak hangi e-postaların kayıtlı olduğu anlaşılabilir (zamanlama saldırısı)
+    private static readonly string DummyHash = Hasher.HashPassword(new User(), Guid.NewGuid().ToString());
 
     [HttpPost("register")]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
     public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
     {
         var email = request.Email.Trim().ToLowerInvariant();
         if (await db.Users.AnyAsync(u => u.Email == email))
-            return Conflict(new { message = "Bu e-posta zaten kayıtlı." }); // 409
+            return EmailTaken();
 
         var user = new User { Email = email, DisplayName = request.DisplayName.Trim() };
-        user.PasswordHash = _hasher.HashPassword(user, request.Password);
+        user.PasswordHash = Hasher.HashPassword(user, request.Password);
         db.Users.Add(user);
 
-        return Ok(await IssueTokensAsync(user));
+        try
+        {
+            return Ok(await IssueTokensAsync(user));
+        }
+        catch (DbUpdateException)
+        {
+            // Aynı e-postayla aynı anda iki kayıt: unique index ikincisini reddeder; 500 değil 409 dönsün
+            if (await db.Users.AsNoTracking().AnyAsync(u => u.Email == email)) return EmailTaken();
+            throw;
+        }
     }
 
+    private ConflictObjectResult EmailTaken() => Conflict(new { message = "Bu e-posta zaten kayıtlı." }); // 409
+
     [HttpPost("login")]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest request)
     {
         var email = request.Email.Trim().ToLowerInvariant();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
 
-        // Kullanıcı yoksa da şifre yanlışsa da AYNI mesaj: hangi e-postaların kayıtlı olduğu sızmasın
-        if (user is null ||
-            _hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
+        // Kullanıcı yoksa da şifre yanlışsa da AYNI mesaj ve yaklaşık AYNI süre
+        var valid = Hasher.VerifyHashedPassword(user ?? new User(), user?.PasswordHash ?? DummyHash, request.Password)
+            != PasswordVerificationResult.Failed;
+        if (user is null || !valid)
             return Unauthorized(new { message = "E-posta veya şifre hatalı." });
 
         return Ok(await IssueTokensAsync(user));
     }
 
     [HttpPost("refresh")]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
     public async Task<ActionResult<AuthResponse>> Refresh(RefreshRequest request)
     {
         var hash = tokens.Hash(request.RefreshToken);
@@ -56,18 +76,43 @@ public class AuthController(AppDbContext db, TokenService tokens, IConfiguration
         // güvenlik için kullanıcının tüm oturumlarını kapat
         if (stored.RevokedAt is not null)
         {
-            await db.RefreshTokens
-                .Where(t => t.UserId == stored.UserId && t.RevokedAt == null)
-                .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, DateTime.UtcNow));
+            await RevokeAllSessions(stored.UserId);
             return Unauthorized();
         }
 
         if (stored.ExpiresAt <= DateTime.UtcNow) return Unauthorized();
 
-        // Rotation: eski token iptal, yenisi verilir (her refresh token tek kullanımlık)
-        stored.RevokedAt = DateTime.UtcNow;
+        // Rotation: eski token iptal, yenisi verilir (her refresh token tek kullanımlık).
+        // Koşullu güncelleme: aynı token'la aynı anda iki istek gelirse sadece biri "iptal eden" olur,
+        // diğeri 0 satır günceller ve yeniden kullanım sayılır.
+        var revoked = await db.RefreshTokens
+            .Where(t => t.Id == stored.Id && t.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, DateTime.UtcNow));
+        if (revoked == 0)
+        {
+            await RevokeAllSessions(stored.UserId);
+            return Unauthorized();
+        }
+
         return Ok(await IssueTokensAsync(stored.User));
     }
+
+    // Tüm cihazlardan çıkış: bütün refresh token'lar iptal edilir, push token'lar silinir.
+    // Mevcut erişim token'ları (JWT) en fazla Jwt:AccessTokenMinutes süresi daha geçerli kalır.
+    [Authorize]
+    [HttpPost("logout-all")]
+    public async Task<IActionResult> LogoutAll()
+    {
+        var userId = User.GetUserId(); // Kimin oturumlarının kapanacağı token'dan; istemci başkasını seçemez
+        await RevokeAllSessions(userId);
+        await db.DeviceTokens.Where(d => d.UserId == userId).ExecuteDeleteAsync(); // Kapanan cihazlara bildirim gitmesin
+        return NoContent();
+    }
+
+    private Task<int> RevokeAllSessions(Guid userId) =>
+        db.RefreshTokens
+            .Where(t => t.UserId == userId && t.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, DateTime.UtcNow));
 
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(RefreshRequest request)
@@ -87,8 +132,7 @@ public class AuthController(AppDbContext db, TokenService tokens, IConfiguration
     public async Task<ActionResult<UserResponse>> Me()
     {
         // Kimliği istemcinin gönderdiği veriden değil, imzalı token'dan alıyoruz
-        var userId = Guid.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)!.Value);
-        var user = await db.Users.FindAsync(userId);
+        var user = await db.Users.FindAsync(User.GetUserId());
         if (user is null) return Unauthorized();
 
         return Ok(new UserResponse(user.Id, user.Email, user.DisplayName));

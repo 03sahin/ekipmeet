@@ -94,16 +94,62 @@ builder.Services.AddSingleton<PushQueue>();
 builder.Services.AddHttpClient(ExpoPushService.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(15));
 builder.Services.AddHostedService<ExpoPushService>();
 
+// Güvenlik: hız sınırı (giriş/kayıt/yenileme ve dosya yükleme) ve eski refresh token temizliği
+builder.Services.AddAppRateLimiting(builder.Configuration);
+builder.Services.Configure<TokenCleanupOptions>(builder.Configuration.GetSection("TokenCleanup"));
+builder.Services.AddHostedService<RefreshTokenCleanupService>();
+
+// Beklenmeyen hatalar RFC 7807 ProblemDetails olarak döner; stack trace ve iç ayrıntı istemciye gitmez
+builder.Services.AddProblemDetails(options =>
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions.Remove("exception"); // Geliştirme ortamında bile istisna ayrıntısı eklenmesin
+        context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier; // Logda bulmak için
+    });
+
+// Mobil uygulama tarayıcı değildir, CORS'a ihtiyaç duymaz. Bir web istemcisi eklenirse adresi
+// "Cors:AllowedOrigins" ile verilir; listede olmayan kaynaklardan tarayıcı istekleri reddedilir.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
+    policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
+
+if (builder.Environment.IsProduction())
+    builder.Services.AddHsts(options => options.MaxAge = TimeSpan.FromDays(180));
+
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+app.UseExceptionHandler(); // İşlenmeyen hata → 500 ProblemDetails (ayrıntısız)
+app.UseStatusCodePages();  // Gövdesiz 4xx/5xx yanıtlar da ProblemDetails olsun
+
+// Güvenlik başlıkları: tarayıcı içerik türünü tahmin etmesin, sayfa çerçeveye alınmasın, adres sızmasın
+app.Use(async (context, next) =>
 {
+    var headers = context.Response.Headers;
+    headers.XContentTypeOptions = "nosniff";
+    headers.XFrameOptions = "DENY";
+    headers["Referrer-Policy"] = "no-referrer";
+    await next();
+});
+
+if (app.Environment.IsProduction())
+{
+    app.UseHsts();             // Tarayıcılar bu alan adına bir daha sadece HTTPS ile gelsin
+    app.UseHttpsRedirection(); // Production'da http istekleri https'e yönlendirilir
+}
+else if (app.Environment.IsDevelopment())
+{
+    // Swagger sadece geliştirmede: production'da API'nin haritası dışarıya açılmaz
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+app.UseCors();
 app.UseAuthentication(); // Önce "kimsin?"
 app.UseAuthorization();  // Sonra "yetkin var mı?" — sıra önemli
+app.UseRateLimiter();    // Kimlikten sonra: yükleme sınırı kullanıcıya göre ayrılır
 app.MapControllers();
 app.MapHub<RoomHub>("/hubs/rooms");
 app.Run();
+
+// Entegrasyon testlerindeki WebApplicationFactory<Program> için
+public partial class Program;
