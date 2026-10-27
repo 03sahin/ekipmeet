@@ -95,6 +95,51 @@ npx eas-cli@latest build -p android --profile preview
   `EXPO_PUBLIC_API_URL` `https://...` olmalı ve production profilinde HTTP izni verilmemelidir.
 - Sürüm `app.json`'dan okunur (`appVersionSource: local`): `version` 1.0.0, `android.versionCode` 1. Her yeni APK'da
   versionCode artırılmalıdır, yoksa Android eski sürümün üzerine kurmaz.
+- Release derlemede R8 kodu küçültür; WebRTC sınıfları için gereken keep/dontwarn kuralları `app.config.js`'te
+  (`expo-build-properties` → `extraProguardRules`).
+- Yüklenen arşivden backend, testler, `node_modules` ve `android/` hariç tutulur: depo kökündeki `.easignore`
+  (EAS bu dosyayı sadece git kökünden okur). İçeriği kontrol etmek için:
+  `npx eas-cli@latest build:inspect -p android --profile preview --stage archive --output <klasör>`
+
+### Derleme adımları
+
+1. `eas.json` → `build.preview.env.EXPO_PUBLIC_API_URL` bilgisayarın güncel IP'sini göstersin (`ipconfig` → Wi-Fi IPv4).
+2. `cd mobile` → `npx eas-cli@latest build -p android --profile preview`
+   - İlk derlemede `Generate a new Android Keystore?` → **Y** (anahtar Expo'da saklanır).
+   - Sonda emülatöre kurmayı sorarsa → **n**.
+3. Derleme bulutta 10–20 dk sürer; bitince terminalde APK linki ve QR kodu çıkar. Geçmiş derlemeler:
+   https://expo.dev → proje → **Builds**.
+
+İsteğe bağlı yerel doğrulama (bulut kuyruğunu beklemeden R8 hatalarını görmek için):
+
+```powershell
+cd mobile
+$env:EKIPMEET_ALLOW_HTTP = "true"; $env:EXPO_PUBLIC_API_URL = "http://192.168.1.20:5047"
+npx expo prebuild --clean -p android
+cd android; .\gradlew.bat :app:assembleRelease -PreactNativeArchitectures=arm64-v8a
+```
+
+### Telefona kurulum
+
+> Telefonda development build kuruluysa önce onu **kaldır**: ikisi aynı paket adını (`com.ekipmeet.app`) kullanır ama
+> farklı anahtarlarla imzalıdır; Android üstüne kurmaz ("Uygulama yüklenmedi"). Development build'e
+> `npx expo run:android` ile geri dönülür.
+
+**Link / QR ile:**
+1. Telefonun kamerasıyla terminaldeki QR kodu okut ya da APK linkini telefonda aç; APK iner.
+2. İndirilen dosyaya dokun. Android "bilinmeyen kaynaklardan yükleme" uyarısı verirse **Ayarlar**'a geç ve dosyayı
+   açan uygulama (Chrome / Dosyalar) için **Bu kaynaktan izin ver**'i aç, geri dönüp **Yükle**'ye bas.
+3. Xiaomi'de "güvenlik taraması" çıkarsa **Yine de yükle**. Kurulumdan sonra izni tekrar kapatabilirsin.
+
+**adb ile (USB):**
+1. APK'yı bilgisayara indir (expo.dev → Builds → derleme → **Download**).
+2. Telefonda USB hata ayıklama açık olsun; `adb devices` telefonu göstermeli.
+3. Kur:
+   ```powershell
+   adb uninstall com.ekipmeet.app                 # Development build varsa (verileri de siler)
+   adb -s <telefon-seri-no> install -r .\ekipmeet.apk
+   ```
+   Xiaomi'de "USB üzerinden yükle" seçeneği kapalıysa Geliştirici seçenekleri → **USB üzerinden yükle**'yi aç.
 
 ### Backend'i APK ile kullanmak için başlatma
 
@@ -176,3 +221,10 @@ dotnet user-secrets set "WebRtc:IceServers:1:Credential" "sifre"
   ayarlanmalıdır, yoksa tüm istekler aynı IP'den geliyor görünür.
 - `logout-all` sonrası mevcut erişim token'ları (JWT) en fazla `Jwt:AccessTokenMinutes` (15 dk) daha geçerlidir.
 - SignalR hub mesajlarında (oda sohbeti) ayrıca hız sınırı yoktur.
+
+## Sonraki işler
+
+- **Push token kaydının yenilenmesi:** Token şu an oturum başladığında kaydediliyor (girişte ve kayıtlı oturumla
+  uygulama her açıldığında). Uygulama açıkken token değişirse (`Notifications.addPushTokenListener`) ve uygulama
+  arka plandan öne geldiğinde de backend'e yeniden kaydedilmeli; `DeviceToken.LastSeenAt` güncellenip uzun süre
+  görülmeyen token'lar temizlenebilir.
