@@ -77,6 +77,42 @@ npx expo start --dev-client   # ya da: npm start
 Cihazda **EkipMeet** uygulamasını aç; Metro'ya kendisi bağlanır. USB'li telefonda bağlantıyı kolaylaştırmak için:
 `adb reverse tcp:8081 tcp:8081` ve `adb reverse tcp:5047 tcp:5047`.
 
+## Yayın: telefona kurulabilen APK (preview)
+
+`eas.json`'daki `preview` profili Metro'ya ihtiyaç duymayan, kendi içinde JS paketi olan bir **APK** üretir:
+
+```powershell
+cd mobile
+npx eas-cli@latest build -p android --profile preview
+```
+
+- Backend adresi derleme sırasında gömülür: `eas.json` → `build.preview.env.EXPO_PUBLIC_API_URL`
+  (bilgisayarın yerel ağ IP'si değişirse güncellenip yeniden derlenmelidir).
+- **HTTP (cleartext) sadece preview'da açık.** Release derlemelerde Android şifresiz HTTP'yi engeller; preview profili
+  `EKIPMEET_ALLOW_HTTP=true` verir ve `app.config.js` bu durumda `expo-build-properties` ile `usesCleartextTraffic`'i açar.
+  Development build'in debug manifest'i HTTP'ye zaten izin verir.
+- **Production için HTTPS zorunludur:** backend gerçek bir alan adında, geçerli bir TLS sertifikasıyla yayınlanmalı,
+  `EXPO_PUBLIC_API_URL` `https://...` olmalı ve production profilinde HTTP izni verilmemelidir.
+- Sürüm `app.json`'dan okunur (`appVersionSource: local`): `version` 1.0.0, `android.versionCode` 1. Her yeni APK'da
+  versionCode artırılmalıdır, yoksa Android eski sürümün üzerine kurmaz.
+
+### Backend'i APK ile kullanmak için başlatma
+
+```powershell
+cd backend
+dotnet run -c Release --launch-profile http   # 0.0.0.0:5047, yerel ağdaki telefon erişebilir
+```
+
+Ortam `Development` kalır: User Secrets (bağlantı dizesi, JWT anahtarı) sadece Development'ta okunur ve
+`Production` HTTPS'e yönlendirdiği için http ile gelen telefon bağlanamaz. Gerçek yayında secret'lar ortam
+değişkenlerinden verilip `ASPNETCORE_ENVIRONMENT=Production` ve HTTPS kullanılır.
+
+Windows Güvenlik Duvarı 5047'ye gelen bağlantıyı engelliyorsa (yönetici PowerShell):
+
+```powershell
+New-NetFirewallRule -DisplayName "EkipMeet API 5047 (yerel ag)" -Direction Inbound -Protocol TCP -LocalPort 5047 -Action Allow -Profile Private,Public -RemoteAddress LocalSubnet
+```
+
 ## Test ve kalite kontrolleri
 
 ```powershell
