@@ -14,7 +14,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.1.20:5047",
+        "EXPO_PUBLIC_API_URL": "http://192.168.1.33:5047",
         "EKIPMEET_ALLOW_HTTP": "true"
       }
     },
