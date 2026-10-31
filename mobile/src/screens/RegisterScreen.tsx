@@ -4,12 +4,15 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-nativ
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { AuthStackParamList } from '../navigation/types';
-import { authStyles as s } from './authStyles';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
+import { makeAuthStyles } from './authStyles';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export default function RegisterScreen({ navigation }: Props) {
   const { register } = useAuth();
+  const { colors } = useTheme();
+  const s = useThemedStyles(makeAuthStyles);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,10 +41,17 @@ export default function RegisterScreen({ navigation }: Props) {
       <Text style={s.title}>EkipMeet</Text>
       <Text style={s.subtitle}>Yeni hesap oluştur</Text>
 
-      <TextInput style={s.input} placeholder="Ad Soyad" value={displayName} onChangeText={setDisplayName} />
+      <TextInput
+        style={s.input}
+        placeholder="Ad Soyad"
+        placeholderTextColor={colors.placeholder}
+        value={displayName}
+        onChangeText={setDisplayName}
+      />
       <TextInput
         style={s.input}
         placeholder="E-posta"
+        placeholderTextColor={colors.placeholder}
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -50,6 +60,7 @@ export default function RegisterScreen({ navigation }: Props) {
       <TextInput
         style={s.input}
         placeholder="Şifre (en az 8 karakter)"
+        placeholderTextColor={colors.placeholder}
         value={password}
         onChangeText={setPassword}
         secureTextEntry

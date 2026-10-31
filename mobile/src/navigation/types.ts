@@ -22,6 +22,7 @@ export type RootStackParamList = {
   Call: { callKey: string; title: string }; // callKey: "meeting:{guid}" ya da "room:{id}"
   ImageViewer: { attachmentId: string; name: string };
   Notifications: undefined;
+  Settings: undefined;
 };
 
 export type AuthStackParamList = {

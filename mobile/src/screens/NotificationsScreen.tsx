@@ -9,6 +9,8 @@ import { RootStackParamList } from '../navigation/types';
 import { useNotifications } from '../notifications/NotificationsContext';
 import { openNotificationTarget } from '../notifications/openNotificationTarget';
 import { onHubEvent } from '../realtime/roomHub';
+import { ThemeColors } from '../theme/colors';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { AppNotification, NotificationType } from '../types/notification';
 import { formatListTime } from '../utils/format';
 
@@ -24,6 +26,8 @@ const ICONS: Record<NotificationType, { name: ComponentProps<typeof Ionicons>['n
 
 export default function NotificationsScreen({ navigation }: Props) {
   const { unreadCount, markRead, markAllRead } = useNotifications();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -75,7 +79,7 @@ export default function NotificationsScreen({ navigation }: Props) {
           </Pressable>
         ) : null,
     });
-  }, [navigation, unreadCount, readAll]);
+  }, [navigation, unreadCount, readAll, styles]);
 
   async function loadMore() {
     if (loadingMore || !hasMore || items.length === 0) return;
@@ -102,7 +106,7 @@ export default function NotificationsScreen({ navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.chats.text} />
       </View>
     );
   }
@@ -121,7 +125,7 @@ export default function NotificationsScreen({ navigation }: Props) {
       onEndReachedThreshold={0.4}
       ListHeaderComponent={error ? <Text style={styles.error}>{error}</Text> : undefined}
       ListEmptyComponent={!error ? <Text style={styles.empty}>Henüz bildirimin yok.</Text> : undefined}
-      ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.more} color="#16a34a" /> : undefined}
+      ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.more} color={colors.chats.text} /> : undefined}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
       renderItem={({ item }) => {
         const icon = ICONS[item.type];
@@ -148,22 +152,23 @@ export default function NotificationsScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  readAll: { color: '#16a34a', fontWeight: '600' },
-  error: { color: '#dc2626', padding: 16 },
-  empty: { color: '#6b7280', textAlign: 'center', marginTop: 48, fontSize: 15 },
-  more: { marginVertical: 12 },
-  separator: { height: StyleSheet.hairlineWidth, backgroundColor: '#e5e7eb' },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
-  rowUnread: { backgroundColor: '#f0fdf4' },
-  pressed: { backgroundColor: '#f3f4f6' },
-  icon: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  body: { flex: 1 },
-  title: { fontSize: 15, color: '#111827' },
-  bold: { fontWeight: '700' },
-  text: { fontSize: 14, color: '#4b5563', marginTop: 2 },
-  time: { fontSize: 12, color: '#9ca3af', marginTop: 4 },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#16a34a', marginTop: 6 },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.surface },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    readAll: { color: c.chats.text, fontWeight: '600' },
+    error: { color: c.danger, padding: 16 },
+    empty: { color: c.textTertiary, textAlign: 'center', marginTop: 48, fontSize: 15 },
+    more: { marginVertical: 12 },
+    separator: { height: StyleSheet.hairlineWidth, backgroundColor: c.border },
+    row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
+    rowUnread: { backgroundColor: c.chats.faint },
+    pressed: { backgroundColor: c.surfaceMuted },
+    icon: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+    body: { flex: 1 },
+    title: { fontSize: 15, color: c.text },
+    bold: { fontWeight: '700' },
+    text: { fontSize: 14, color: c.textSecondary, marginTop: 2 },
+    time: { fontSize: 12, color: c.textMuted, marginTop: 4 },
+    dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: c.chats.solid, marginTop: 6 },
+  });

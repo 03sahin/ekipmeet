@@ -9,6 +9,8 @@ import { useAuth } from '../auth/AuthContext';
 import RoomCard from '../components/RoomCard';
 import { RootStackParamList, TabParamList } from '../navigation/types';
 import { connectRoomHub, onHubEvent, onReconnected } from '../realtime/roomHub';
+import { ThemeColors } from '../theme/colors';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { Room } from '../types/room';
 
 // Sekme ekranı ama üstteki stack'e de (RoomDetail, RoomForm) gidebilmeli
@@ -19,6 +21,8 @@ type Props = CompositeScreenProps<
 
 export default function RoomsScreen({ navigation }: Props) {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -59,7 +63,7 @@ export default function RoomsScreen({ navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
+        <ActivityIndicator size="large" color={colors.rooms.text} />
       </View>
     );
   }
@@ -110,26 +114,27 @@ export default function RoomsScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f3f4f6' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  listContent: { padding: 16, paddingBottom: 96 },
-  column: { marginHorizontal: -6 }, // Hücrelerin yan boşluklarını dengeler
-  cell: { width: '50%', paddingHorizontal: 6 },
-  greeting: { fontSize: 18, fontWeight: '600', color: '#111827', marginBottom: 16 },
-  error: { color: '#dc2626', marginBottom: 12 },
-  empty: { color: '#6b7280', textAlign: 'center', marginTop: 48, fontSize: 15 },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 28,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#2563eb',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4, // Android gölgesi
-  },
-  fabText: { color: '#fff', fontSize: 32, lineHeight: 34 },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    listContent: { padding: 16, paddingBottom: 96 },
+    column: { marginHorizontal: -6 }, // Hücrelerin yan boşluklarını dengeler
+    cell: { width: '50%', paddingHorizontal: 6 },
+    greeting: { fontSize: 18, fontWeight: '600', color: c.text, marginBottom: 16 },
+    error: { color: c.danger, marginBottom: 12 },
+    empty: { color: c.textTertiary, textAlign: 'center', marginTop: 48, fontSize: 15 },
+    fab: {
+      position: 'absolute',
+      right: 20,
+      bottom: 28,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: c.rooms.solid,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 4, // Android gölgesi
+    },
+    fabText: { color: c.onAccent, fontSize: 32, lineHeight: 34 },
+  });

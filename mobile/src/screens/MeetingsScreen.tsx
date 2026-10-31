@@ -9,9 +9,11 @@ import { getErrorMessage } from '../api/errors';
 import { getMeetingsInRange, getUpcomingMeetings } from '../api/meetings';
 import '../components/meetings/calendarLocale';
 import MeetingListItem from '../components/meetings/MeetingListItem';
-import { MEETING } from '../components/meetings/theme';
+
 import { RootStackParamList, TabParamList } from '../navigation/types';
 import { connectRoomHub, onHubEvent, onReconnected } from '../realtime/roomHub';
+import { ThemeColors } from '../theme/colors';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { MeetingSummary } from '../types/meeting';
 import { formatDayHeading, formatLongDate, fromDateKey, toDateKey } from '../utils/date';
 
@@ -33,6 +35,8 @@ function monthRange(monthKey: string): [Date, Date] {
 }
 
 export default function MeetingsScreen({ navigation }: Props) {
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const today = toDateKey(new Date());
   const [view, setView] = useState<View_>('calendar');
   const [selectedDay, setSelectedDay] = useState(today);
@@ -96,11 +100,11 @@ export default function MeetingsScreen({ navigation }: Props) {
       const key = toDateKey(new Date(m.startsAt));
       const active = m.status !== 'Cancelled';
       // Aynı günde hem iptal hem aktif varsa nokta turuncu kalsın
-      if (!marks[key] || active) marks[key] = { marked: true, dotColor: active ? MEETING.primary : '#9ca3af' };
+      if (!marks[key] || active) marks[key] = { marked: true, dotColor: active ? colors.meetings.text : colors.textMuted };
     }
-    marks[selectedDay] = { ...marks[selectedDay], selected: true, selectedColor: MEETING.primary };
+    marks[selectedDay] = { ...marks[selectedDay], selected: true, selectedColor: colors.meetings.solid };
     return marks;
-  }, [monthMeetings, selectedDay]);
+  }, [monthMeetings, selectedDay, colors]);
 
   const dayMeetings = useMemo(
     () => monthMeetings.filter((m) => toDateKey(new Date(m.startsAt)) === selectedDay),
@@ -126,7 +130,7 @@ export default function MeetingsScreen({ navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={MEETING.primary} />
+        <ActivityIndicator size="large" color={colors.meetings.text} />
       </View>
     );
   }
@@ -138,7 +142,7 @@ export default function MeetingsScreen({ navigation }: Props) {
           <Ionicons
             name={v === 'calendar' ? 'calendar-outline' : 'list-outline'}
             size={16}
-            color={view === v ? '#fff' : MEETING.dark}
+            color={view === v ? colors.onAccent : colors.meetings.onSoft}
           />
           <Text style={[styles.switchText, view === v && styles.switchTextActive]}>
             {v === 'calendar' ? 'Takvim' : `Yaklaşan (${upcoming.length})`}
@@ -163,6 +167,7 @@ export default function MeetingsScreen({ navigation }: Props) {
               {error && <Text style={styles.error}>{error}</Text>}
               <View style={styles.calendarCard}>
                 <Calendar
+                  key={isDark ? 'dark' : 'light'} // Takvim temayı ilk açılışta okur; tema değişince yeniden kurulsun
                   current={selectedDay}
                   firstDay={1} // Hafta pazartesi başlasın
                   markedDates={markedDates}
@@ -173,10 +178,17 @@ export default function MeetingsScreen({ navigation }: Props) {
                   }}
                   enableSwipeMonths
                   theme={{
-                    todayTextColor: MEETING.primary,
-                    arrowColor: MEETING.primary,
-                    selectedDayBackgroundColor: MEETING.primary,
-                    dotColor: MEETING.primary,
+                    calendarBackground: colors.surface,
+                    monthTextColor: colors.text,
+                    dayTextColor: colors.text,
+                    textDisabledColor: colors.textMuted,
+                    textSectionTitleColor: colors.textTertiary,
+                    todayTextColor: colors.meetings.text,
+                    arrowColor: colors.meetings.text,
+                    selectedDayBackgroundColor: colors.meetings.solid,
+                    selectedDayTextColor: colors.onAccent,
+                    dotColor: colors.meetings.text,
+                    selectedDotColor: colors.onAccent,
                     textMonthFontWeight: '700',
                     textDayHeaderFontWeight: '600',
                   }}
@@ -223,7 +235,7 @@ export default function MeetingsScreen({ navigation }: Props) {
       {/* İki eylem: planlı toplantı (seçili güne) ve hemen başlayan hızlı toplantı */}
       <View style={styles.actions}>
         <Pressable style={[styles.action, styles.actionSecondary]} onPress={() => navigation.navigate('InstantMeeting')}>
-          <Ionicons name="flash" size={18} color={MEETING.primary} />
+          <Ionicons name="flash" size={18} color={colors.meetings.text} />
           <Text style={styles.actionSecondaryText}>Hızlı toplantı</Text>
         </Pressable>
         <Pressable
@@ -240,57 +252,58 @@ export default function MeetingsScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: MEETING.background },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  listContent: { padding: 16, paddingBottom: 150 }, // Alttaki iki buton listeyi kapatmasın
-  error: { color: '#dc2626', marginBottom: 12 },
-  switcher: {
-    flexDirection: 'row',
-    backgroundColor: MEETING.light,
-    borderRadius: 999,
-    padding: 4,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: MEETING.border,
-  },
-  switchItem: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    borderRadius: 999,
-  },
-  switchActive: { backgroundColor: MEETING.primary },
-  switchText: { color: MEETING.dark, fontWeight: '600' },
-  switchTextActive: { color: '#fff' },
-  calendarCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: MEETING.border,
-    paddingBottom: 8,
-  },
-  dayTitle: { fontSize: 15, fontWeight: '700', color: MEETING.dark, marginTop: 16, marginBottom: 10 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: MEETING.dark, marginTop: 8, marginBottom: 8 },
-  emptyDay: { alignItems: 'center', marginTop: 16, gap: 8 },
-  empty: { color: '#6b7280', textAlign: 'center', marginTop: 16 },
-  link: { color: MEETING.primary, fontWeight: '600' },
-  actions: { position: 'absolute', right: 16, bottom: 20, alignItems: 'flex-end', gap: 10 },
-  action: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 999,
-    elevation: 4,
-  },
-  actionPrimary: { backgroundColor: MEETING.primary },
-  actionPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  actionSecondary: { backgroundColor: '#fff', borderWidth: 1, borderColor: MEETING.primary },
-  actionSecondaryText: { color: MEETING.primary, fontWeight: '700', fontSize: 15 },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.meetings.faint },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    listContent: { padding: 16, paddingBottom: 150 }, // Alttaki iki buton listeyi kapatmasın
+    error: { color: c.danger, marginBottom: 12 },
+    switcher: {
+      flexDirection: 'row',
+      backgroundColor: c.meetings.soft,
+      borderRadius: 999,
+      padding: 4,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: c.meetings.border,
+    },
+    switchItem: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 8,
+      borderRadius: 999,
+    },
+    switchActive: { backgroundColor: c.meetings.solid },
+    switchText: { color: c.meetings.onSoft, fontWeight: '600' },
+    switchTextActive: { color: c.onAccent },
+    calendarCard: {
+      backgroundColor: c.surface,
+      borderRadius: 16,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: c.meetings.border,
+      paddingBottom: 8,
+    },
+    dayTitle: { fontSize: 15, fontWeight: '700', color: c.meetings.onSoft, marginTop: 16, marginBottom: 10 },
+    sectionTitle: { fontSize: 15, fontWeight: '700', color: c.meetings.onSoft, marginTop: 8, marginBottom: 8 },
+    emptyDay: { alignItems: 'center', marginTop: 16, gap: 8 },
+    empty: { color: c.textTertiary, textAlign: 'center', marginTop: 16 },
+    link: { color: c.meetings.text, fontWeight: '600' },
+    actions: { position: 'absolute', right: 16, bottom: 20, alignItems: 'flex-end', gap: 10 },
+    action: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 18,
+      borderRadius: 999,
+      elevation: 4,
+    },
+    actionPrimary: { backgroundColor: c.meetings.solid },
+    actionPrimaryText: { color: c.onAccent, fontWeight: '700', fontSize: 15 },
+    actionSecondary: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.meetings.text },
+    actionSecondaryText: { color: c.meetings.text, fontWeight: '700', fontSize: 15 },
+  });

@@ -14,10 +14,12 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import Avatar from '../components/Avatar';
 import StatusTag from '../components/meetings/StatusTag';
-import { MEETING } from '../components/meetings/theme';
+
 import UserSearch from '../components/UserSearch';
 import { RootStackParamList } from '../navigation/types';
 import { onHubEvent } from '../realtime/roomHub';
+import { ThemeColors } from '../theme/colors';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { meetingCallKey } from '../types/call';
 import { UserSummary } from '../types/chat';
 import { MeetingDetail, MeetingParticipant } from '../types/meeting';
@@ -29,6 +31,8 @@ const JOIN_EARLY_MS = 10 * 60 * 1000; // "Toplantıya katıl" başlangıçtan 10
 
 export default function MeetingDetailScreen({ route, navigation }: Props) {
   const { meetingId } = route.params;
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user } = useAuth();
   const [meeting, setMeeting] = useState<MeetingDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -122,7 +126,7 @@ export default function MeetingDetailScreen({ route, navigation }: Props) {
   if (!meeting) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={MEETING.primary} />
+        <ActivityIndicator size="large" color={colors.meetings.text} />
       </View>
     );
   }
@@ -153,7 +157,7 @@ export default function MeetingDetailScreen({ route, navigation }: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {cancelled && (
         <View style={styles.cancelBanner}>
-          <Ionicons name="close-circle" size={20} color="#991b1b" />
+          <Ionicons name="close-circle" size={20} color={colors.onDangerSoft} />
           <Text style={styles.cancelText}>Bu toplantı iptal edildi</Text>
         </View>
       )}
@@ -166,7 +170,7 @@ export default function MeetingDetailScreen({ route, navigation }: Props) {
         </View>
         <View style={styles.dateInfo}>
           <View style={styles.titleLine}>
-            {meeting.isInstant && <Ionicons name="flash" size={18} color={MEETING.primary} />}
+            {meeting.isInstant && <Ionicons name="flash" size={18} color={colors.meetings.text} />}
             <Text style={[styles.title, cancelled && styles.titleCancelled]}>{meeting.title}</Text>
           </View>
           <Text style={styles.dateText}>{formatLongDate(start)}</Text>
@@ -198,20 +202,21 @@ export default function MeetingDetailScreen({ route, navigation }: Props) {
           <View style={styles.respondRow}>
             {(['Accepted', 'Declined'] as const).map((r) => {
               const selected = meeting.myResponse === r;
-              const color = r === 'Accepted' ? '#16a34a' : '#dc2626';
+              const color = r === 'Accepted' ? colors.chats.text : colors.danger; // Kenarlık ve yazı
+              const fill = r === 'Accepted' ? colors.chats.solid : colors.dangerSolid; // Seçiliyken zemin
               return (
                 <Pressable
                   key={r}
-                  style={[styles.respondButton, { borderColor: color }, selected && { backgroundColor: color }]}
+                  style={[styles.respondButton, { borderColor: selected ? fill : color }, selected && { backgroundColor: fill }]}
                   disabled={busy || selected}
                   onPress={() => run(() => respondToMeeting(meetingId, r), 'Yanıt gönderilemedi')}
                 >
                   <Ionicons
                     name={r === 'Accepted' ? 'checkmark' : 'close'}
                     size={18}
-                    color={selected ? '#fff' : color}
+                    color={selected ? colors.onAccent : color}
                   />
-                  <Text style={[styles.respondText, { color: selected ? '#fff' : color }]}>
+                  <Text style={[styles.respondText, { color: selected ? colors.onAccent : color }]}>
                     {r === 'Accepted' ? 'Katılıyorum' : 'Katılmıyorum'}
                   </Text>
                 </Pressable>
@@ -229,7 +234,7 @@ export default function MeetingDetailScreen({ route, navigation }: Props) {
 
         {editable && (
           <Pressable style={styles.addRow} onPress={() => setAdding((a) => !a)}>
-            <Ionicons name={adding ? 'close' : 'person-add'} size={18} color={MEETING.primary} />
+            <Ionicons name={adding ? 'close' : 'person-add'} size={18} color={colors.meetings.text} />
             <Text style={styles.addText}>{adding ? 'Vazgeç' : 'Katılımcı ekle'}</Text>
           </Pressable>
         )}
@@ -254,7 +259,7 @@ export default function MeetingDetailScreen({ route, navigation }: Props) {
             <StatusTag kind={p.role === 'Organizer' ? 'Organizer' : p.response} />
             {editable && p.role !== 'Organizer' && (
               <Pressable onPress={() => confirmRemove(p)} hitSlop={8} style={styles.removeButton}>
-                <Ionicons name="remove-circle-outline" size={22} color="#dc2626" />
+                <Ionicons name="remove-circle-outline" size={22} color={colors.danger} />
               </Pressable>
             )}
           </View>
@@ -267,11 +272,11 @@ export default function MeetingDetailScreen({ route, navigation }: Props) {
             style={[styles.outlineButton, styles.flex]}
             onPress={() => navigation.navigate('MeetingForm', { meetingId })}
           >
-            <Ionicons name="create-outline" size={18} color={MEETING.primary} />
+            <Ionicons name="create-outline" size={18} color={colors.meetings.text} />
             <Text style={styles.outlineText}>Düzenle</Text>
           </Pressable>
           <Pressable style={[styles.dangerButton, styles.flex]} onPress={confirmCancel} disabled={busy}>
-            <Ionicons name="close-circle-outline" size={18} color="#dc2626" />
+            <Ionicons name="close-circle-outline" size={18} color={colors.danger} />
             <Text style={styles.dangerText}>İptal et</Text>
           </Pressable>
         </View>
@@ -280,113 +285,114 @@ export default function MeetingDetailScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: MEETING.background },
-  content: { padding: 16, paddingBottom: 40 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  error: { color: '#dc2626', fontSize: 16, textAlign: 'center' },
-  cancelBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#fee2e2',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
-  },
-  cancelText: { color: '#991b1b', fontWeight: '700', fontSize: 15 },
-  dateCard: {
-    flexDirection: 'row',
-    gap: 14,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: MEETING.border,
-  },
-  dateLeaf: {
-    width: 64,
-    borderRadius: 12,
-    backgroundColor: MEETING.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-  },
-  dateLeafCancelled: { backgroundColor: '#9ca3af' },
-  leafMonth: { color: '#fff', fontSize: 13, fontWeight: '700' },
-  leafDay: { color: '#fff', fontSize: 28, fontWeight: '800' },
-  dateInfo: { flex: 1 },
-  titleLine: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  title: { flex: 1, fontSize: 20, fontWeight: '700', color: '#111827' },
-  titleCancelled: { textDecorationLine: 'line-through', color: '#9ca3af' },
-  dateText: { fontSize: 14, color: '#374151', marginTop: 4 },
-  organizer: { fontSize: 13, color: '#6b7280', marginTop: 6 },
-  description: { fontSize: 15, color: '#374151', marginTop: 14, lineHeight: 21 },
-  joinButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#16a34a',
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginTop: 18,
-  },
-  joinDisabled: { backgroundColor: '#d1d5db' },
-  joinText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  joinHint: { textAlign: 'center', color: '#6b7280', marginTop: 6, fontSize: 13 },
-  section: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: MEETING.border,
-  },
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: MEETING.dark, marginBottom: 10 },
-  respondRow: { flexDirection: 'row', gap: 10 },
-  respondButton: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1.5,
-    borderRadius: 10,
-    paddingVertical: 12,
-  },
-  respondText: { fontWeight: '700' },
-  pendingHint: { color: '#92400e', marginTop: 8, fontSize: 13 },
-  addRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
-  addText: { color: MEETING.primary, fontWeight: '700' },
-  search: { paddingBottom: 8 },
-  participantRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
-  participantName: { flex: 1, fontSize: 15, color: '#111827' },
-  removeButton: { marginLeft: 4 },
-  ownerActions: { flexDirection: 'row', gap: 12, marginTop: 16 },
-  flex: { flex: 1 },
-  outlineButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: MEETING.primary,
-    borderRadius: 10,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-  },
-  outlineText: { color: MEETING.primary, fontWeight: '700', fontSize: 16 },
-  dangerButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: '#dc2626',
-    borderRadius: 10,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-  },
-  dangerText: { color: '#dc2626', fontWeight: '700', fontSize: 16 },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.meetings.faint },
+    content: { padding: 16, paddingBottom: 40 },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+    error: { color: c.danger, fontSize: 16, textAlign: 'center' },
+    cancelBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: c.dangerSoft,
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 12,
+    },
+    cancelText: { color: c.onDangerSoft, fontWeight: '700', fontSize: 15 },
+    dateCard: {
+      flexDirection: 'row',
+      gap: 14,
+      backgroundColor: c.surface,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: c.meetings.border,
+    },
+    dateLeaf: {
+      width: 64,
+      borderRadius: 12,
+      backgroundColor: c.meetings.solid,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+    },
+    dateLeafCancelled: { backgroundColor: c.textMuted },
+    leafMonth: { color: c.onAccent, fontSize: 13, fontWeight: '700' },
+    leafDay: { color: c.onAccent, fontSize: 28, fontWeight: '800' },
+    dateInfo: { flex: 1 },
+    titleLine: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    title: { flex: 1, fontSize: 20, fontWeight: '700', color: c.text },
+    titleCancelled: { textDecorationLine: 'line-through', color: c.textMuted },
+    dateText: { fontSize: 14, color: c.textSecondary, marginTop: 4 },
+    organizer: { fontSize: 13, color: c.textTertiary, marginTop: 6 },
+    description: { fontSize: 15, color: c.textSecondary, marginTop: 14, lineHeight: 21 },
+    joinButton: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: c.chats.solid,
+      paddingVertical: 14,
+      borderRadius: 12,
+      marginTop: 18,
+    },
+    joinDisabled: { backgroundColor: c.disabled },
+    joinText: { color: c.onAccent, fontSize: 16, fontWeight: '700' },
+    joinHint: { textAlign: 'center', color: c.textTertiary, marginTop: 6, fontSize: 13 },
+    section: {
+      backgroundColor: c.surface,
+      borderRadius: 16,
+      padding: 14,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: c.meetings.border,
+    },
+    sectionTitle: { fontSize: 14, fontWeight: '700', color: c.meetings.onSoft, marginBottom: 10 },
+    respondRow: { flexDirection: 'row', gap: 10 },
+    respondButton: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 6,
+      borderWidth: 1.5,
+      borderRadius: 10,
+      paddingVertical: 12,
+    },
+    respondText: { fontWeight: '700' },
+    pendingHint: { color: c.onWarningSoft, marginTop: 8, fontSize: 13 },
+    addRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+    addText: { color: c.meetings.text, fontWeight: '700' },
+    search: { paddingBottom: 8 },
+    participantRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+    participantName: { flex: 1, fontSize: 15, color: c.text },
+    removeButton: { marginLeft: 4 },
+    ownerActions: { flexDirection: 'row', gap: 12, marginTop: 16 },
+    flex: { flex: 1 },
+    outlineButton: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 6,
+      borderWidth: 1,
+      borderColor: c.meetings.text,
+      borderRadius: 10,
+      paddingVertical: 14,
+      backgroundColor: c.surface,
+    },
+    outlineText: { color: c.meetings.text, fontWeight: '700', fontSize: 16 },
+    dangerButton: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 6,
+      borderWidth: 1,
+      borderColor: c.danger,
+      borderRadius: 10,
+      paddingVertical: 14,
+      backgroundColor: c.surface,
+    },
+    dangerText: { color: c.danger, fontWeight: '700', fontSize: 16 },
+  });

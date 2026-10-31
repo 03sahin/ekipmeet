@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { searchUsers } from '../api/chat';
 import { getErrorMessage } from '../api/errors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { UserSummary } from '../types/chat';
 import Avatar from './Avatar';
 
@@ -16,6 +18,8 @@ type UserSearchProps = {
 // Arama kutusu + sonuçlar. Sonuçlar en fazla 20 olduğu için FlatList yerine map yeterli;
 // böylece bileşen ScrollView içine sorunsuz konabiliyor.
 export default function UserSearch({ onSelect, selectedIds = [], excludeIds = [], placeholder, autoFocus }: UserSearchProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserSummary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -70,11 +74,12 @@ export default function UserSearch({ onSelect, selectedIds = [], excludeIds = []
         value={query}
         onChangeText={changeQuery}
         placeholder={placeholder ?? 'İsimle ara...'}
+        placeholderTextColor={colors.placeholder}
         autoFocus={autoFocus}
         autoCorrect={false}
       />
 
-      {loading && <ActivityIndicator style={styles.status} color="#16a34a" />}
+      {loading && <ActivityIndicator style={styles.status} color={colors.chats.text} />}
       {error && <Text style={styles.error}>{error}</Text>}
       {!loading && !error && q.length > 0 && q.length < 2 && <Text style={styles.hint}>En az 2 harf yaz.</Text>}
       {!loading && !error && q.length >= 2 && visible.length === 0 && <Text style={styles.hint}>Kimse bulunamadı.</Text>}
@@ -97,19 +102,21 @@ export default function UserSearch({ onSelect, selectedIds = [], excludeIds = []
   );
 }
 
-const styles = StyleSheet.create({
-  input: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  status: { marginTop: 12 },
-  error: { color: '#dc2626', marginTop: 12 },
-  hint: { color: '#6b7280', marginTop: 12 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-  pressed: { opacity: 0.6 },
-  name: { flex: 1, fontSize: 16, color: '#111827' },
-  check: { fontSize: 18, color: '#16a34a', fontWeight: '700' },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    input: {
+      backgroundColor: c.surfaceMuted,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      fontSize: 16,
+      color: c.text,
+    },
+    status: { marginTop: 12 },
+    error: { color: c.danger, marginTop: 12 },
+    hint: { color: c.textTertiary, marginTop: 12 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+    pressed: { opacity: 0.6 },
+    name: { flex: 1, fontSize: 16, color: c.text },
+    check: { fontSize: 18, color: c.chats.text, fontWeight: '700' },
+  });

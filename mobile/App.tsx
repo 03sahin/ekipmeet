@@ -1,9 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { createNativeStackNavigator, NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
 import NotificationBell from './src/components/NotificationBell';
@@ -27,16 +27,25 @@ import RoomDetailScreen from './src/screens/RoomDetailScreen';
 import RoomFormScreen from './src/screens/RoomFormScreen';
 import RoomLiveScreen from './src/screens/RoomLiveScreen';
 import RoomsScreen from './src/screens/RoomsScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
 const AppStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const Tabs = createBottomTabNavigator<TabParamList>();
 
-function LogoutButton() {
-  const { logout } = useAuth();
+// Tema seçimi ve çıkış Ayarlar ekranında
+function SettingsButton() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { colors } = useTheme();
   return (
-    <Pressable onPress={logout} style={{ marginRight: 16 }} hitSlop={8}>
-      <Text style={{ color: '#dc2626', fontWeight: '600' }}>Çıkış</Text>
+    <Pressable
+      onPress={() => navigation.navigate('Settings')}
+      style={{ marginRight: 16 }}
+      hitSlop={8}
+      accessibilityLabel="Ayarlar"
+    >
+      <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
     </Pressable>
   );
 }
@@ -45,13 +54,14 @@ function HeaderActions() {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
       <NotificationBell />
-      <LogoutButton />
+      <SettingsButton />
     </View>
   );
 }
 
-// Alt sekmeler: her sekmenin kendi üst çubuğu var; zil ve çıkış butonu hepsinde
+// Alt sekmeler: her sekmenin kendi üst çubuğu var; zil ve ayarlar butonu hepsinde
 function MainTabs() {
+  const { colors } = useTheme();
   return (
     <Tabs.Navigator screenOptions={{ headerRight: () => <HeaderActions /> }}>
       <Tabs.Screen
@@ -60,7 +70,7 @@ function MainTabs() {
         options={{
           title: 'Ekip Odaları',
           tabBarLabel: 'Odalar',
-          tabBarActiveTintColor: '#2563eb',
+          tabBarActiveTintColor: colors.rooms.text,
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'grid' : 'grid-outline'} size={size} color={color} />
           ),
@@ -71,8 +81,8 @@ function MainTabs() {
         component={ConversationsScreen}
         options={{
           title: 'Sohbetler',
-          tabBarActiveTintColor: '#16a34a',
-          tabBarBadgeStyle: { backgroundColor: '#16a34a' },
+          tabBarActiveTintColor: colors.chats.text,
+          tabBarBadgeStyle: { backgroundColor: colors.chats.solid, color: colors.onAccent },
           lazy: false, // Sekmeye hiç girilmese de okunmamış rozeti canlı güncellensin
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size} color={color} />
@@ -84,8 +94,8 @@ function MainTabs() {
         component={MeetingsScreen}
         options={{
           title: 'Toplantılar',
-          tabBarActiveTintColor: '#ea580c',
-          tabBarBadgeStyle: { backgroundColor: '#ea580c' },
+          tabBarActiveTintColor: colors.meetings.text,
+          tabBarBadgeStyle: { backgroundColor: colors.meetings.solid, color: colors.onAccent },
           lazy: false, // Yanıt bekleyen davet rozeti sekmeye girmeden de görünsün
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={size} color={color} />
@@ -98,11 +108,12 @@ function MainTabs() {
 
 function RootNavigator() {
   const { user, isLoading } = useAuth();
+  const { colors } = useTheme();
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.rooms.text} />
       </View>
     );
   }
@@ -145,6 +156,7 @@ function RootNavigator() {
         options={{ headerShown: false, statusBarStyle: 'light', animation: 'fade' }}
       />
       <AppStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Bildirimler' }} />
+      <AppStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Ayarlar' }} />
     </AppStack.Navigator>
   ) : (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
@@ -154,18 +166,28 @@ function RootNavigator() {
   );
 }
 
+// Başlık/sekme çubuğu (React Navigation teması) ve durum çubuğu seçili temayı izler
+function ThemedApp() {
+  const { isDark, navigationTheme } = useTheme();
+  return (
+    <AuthProvider>
+      {/* Bildirimler navigasyonun dışında: banner her ekranın üstünde, dokununca navigationRef ile gidilir */}
+      <NotificationsProvider>
+        <NavigationContainer ref={navigationRef} theme={navigationTheme}>
+          <RootNavigator />
+        </NavigationContainer>
+      </NotificationsProvider>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+    </AuthProvider>
+  );
+}
+
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        {/* Bildirimler navigasyonun dışında: banner her ekranın üstünde, dokununca navigationRef ile gidilir */}
-        <NotificationsProvider>
-          <NavigationContainer ref={navigationRef}>
-            <RootNavigator />
-          </NavigationContainer>
-        </NotificationsProvider>
-        <StatusBar style="auto" />
-      </AuthProvider>
+      <ThemeProvider>
+        <ThemedApp />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

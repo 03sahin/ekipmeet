@@ -1,15 +1,18 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ThemeColors } from '../../theme/colors';
+import { useTheme, useThemedStyles } from '../../theme/ThemeContext';
 import { MeetingSummary } from '../../types/meeting';
 import { formatClock } from '../../utils/date';
 import StatusTag from './StatusTag';
-import { MEETING } from './theme';
 
 // now dışarıdan gelir: render saf kalsın, liste ekranı saati kendi zamanlayıcısıyla günceller
 type Props = { meeting: MeetingSummary; now: number; onPress: () => void };
 
 // Takvim/ajanda satırı: solda saat sütunu, renkli şerit, sağda başlık ve durum
 export default function MeetingListItem({ meeting, now, onPress }: Props) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const cancelled = meeting.status === 'Cancelled';
   const live = !cancelled && new Date(meeting.startsAt).getTime() <= now && new Date(meeting.endsAt).getTime() > now;
 
@@ -20,11 +23,11 @@ export default function MeetingListItem({ meeting, now, onPress }: Props) {
         <Text style={styles.end}>{formatClock(new Date(meeting.endsAt))}</Text>
       </View>
 
-      <View style={[styles.bar, { backgroundColor: cancelled ? '#d1d5db' : live ? '#16a34a' : MEETING.primary }]} />
+      <View style={[styles.bar, { backgroundColor: cancelled ? colors.disabled : live ? colors.chats.solid : colors.meetings.solid }]} />
 
       <View style={styles.body}>
         <View style={styles.titleLine}>
-          {meeting.isInstant && <Ionicons name="flash" size={14} color={MEETING.primary} />}
+          {meeting.isInstant && <Ionicons name="flash" size={14} color={colors.meetings.text} />}
           <Text style={[styles.title, cancelled && styles.cancelledTitle]} numberOfLines={1}>
             {meeting.title}
           </Text>
@@ -49,26 +52,27 @@ export default function MeetingListItem({ meeting, now, onPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: MEETING.border,
-  },
-  pressed: { opacity: 0.7 },
-  timeColumn: { width: 52, alignItems: 'flex-start' },
-  start: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  end: { fontSize: 13, color: '#9ca3af', marginTop: 2 },
-  muted: { color: '#9ca3af' },
-  bar: { width: 4, borderRadius: 2, marginRight: 12 },
-  body: { flex: 1 },
-  titleLine: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  title: { flex: 1, fontSize: 16, fontWeight: '600', color: '#111827' },
-  cancelledTitle: { textDecorationLine: 'line-through', color: '#9ca3af' },
-  meta: { fontSize: 13, color: '#6b7280', marginTop: 2 },
-  tags: { flexDirection: 'row', marginTop: 6 },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: c.meetings.border,
+    },
+    pressed: { opacity: 0.7 },
+    timeColumn: { width: 52, alignItems: 'flex-start' },
+    start: { fontSize: 16, fontWeight: '700', color: c.text },
+    end: { fontSize: 13, color: c.textMuted, marginTop: 2 },
+    muted: { color: c.textMuted },
+    bar: { width: 4, borderRadius: 2, marginRight: 12 },
+    body: { flex: 1 },
+    titleLine: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    title: { flex: 1, fontSize: 16, fontWeight: '600', color: c.text },
+    cancelledTitle: { textDecorationLine: 'line-through', color: c.textMuted },
+    meta: { fontSize: 13, color: c.textTertiary, marginTop: 2 },
+    tags: { flexDirection: 'row', marginTop: 6 },
+  });

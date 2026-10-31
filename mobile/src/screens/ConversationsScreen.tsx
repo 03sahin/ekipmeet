@@ -10,6 +10,8 @@ import { useAuth } from '../auth/AuthContext';
 import Avatar from '../components/Avatar';
 import { RootStackParamList, TabParamList } from '../navigation/types';
 import { connectRoomHub, onHubEvent, onReconnected } from '../realtime/roomHub';
+import { ThemeColors } from '../theme/colors';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { ConversationMessage, ConversationSummary } from '../types/chat';
 import { formatListTime } from '../utils/format';
 
@@ -21,6 +23,8 @@ type Props = CompositeScreenProps<
 
 export default function ConversationsScreen({ navigation }: Props) {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -102,7 +106,7 @@ export default function ConversationsScreen({ navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.chats.text} />
       </View>
     );
   }
@@ -170,44 +174,45 @@ export default function ConversationsScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  listContent: { paddingBottom: 96 },
-  error: { color: '#dc2626', padding: 16 },
-  empty: { color: '#6b7280', textAlign: 'center', marginTop: 48, fontSize: 15, paddingHorizontal: 24 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
-  pressed: { backgroundColor: '#f3f4f6' },
-  separator: { height: StyleSheet.hairlineWidth, backgroundColor: '#e5e7eb', marginLeft: 76 }, // Avatarın sağından başlar
-  body: { flex: 1 },
-  topLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { flex: 1, fontSize: 16, color: '#111827', marginRight: 8 },
-  bold: { fontWeight: '700' },
-  time: { fontSize: 12, color: '#9ca3af' },
-  timeUnread: { color: '#16a34a', fontWeight: '600' },
-  bottomLine: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  preview: { flex: 1, fontSize: 14, color: '#6b7280', marginRight: 8 },
-  previewUnread: { color: '#111827' },
-  badge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#16a34a',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-  },
-  badgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 28,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#16a34a',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.surface },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    listContent: { paddingBottom: 96 },
+    error: { color: c.danger, padding: 16 },
+    empty: { color: c.textTertiary, textAlign: 'center', marginTop: 48, fontSize: 15, paddingHorizontal: 24 },
+    row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
+    pressed: { backgroundColor: c.surfaceMuted },
+    separator: { height: StyleSheet.hairlineWidth, backgroundColor: c.border, marginLeft: 76 }, // Avatarın sağından başlar
+    body: { flex: 1 },
+    topLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    title: { flex: 1, fontSize: 16, color: c.text, marginRight: 8 },
+    bold: { fontWeight: '700' },
+    time: { fontSize: 12, color: c.textMuted },
+    timeUnread: { color: c.chats.text, fontWeight: '600' },
+    bottomLine: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+    preview: { flex: 1, fontSize: 14, color: c.textTertiary, marginRight: 8 },
+    previewUnread: { color: c.text },
+    badge: {
+      minWidth: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: c.chats.solid,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 6,
+    },
+    badgeText: { color: c.onAccent, fontSize: 12, fontWeight: '700' },
+    fab: {
+      position: 'absolute',
+      right: 20,
+      bottom: 28,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: c.chats.solid,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 4,
+    },
+  });

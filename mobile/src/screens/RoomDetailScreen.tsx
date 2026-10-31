@@ -5,12 +5,16 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'rea
 import { getErrorMessage } from '../api/errors';
 import { deleteRoom, getRoom } from '../api/rooms';
 import { RootStackParamList } from '../navigation/types';
+import { ThemeColors } from '../theme/colors';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { Room } from '../types/room';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RoomDetail'>;
 
 export default function RoomDetailScreen({ route, navigation }: Props) {
   const { roomId } = route.params;
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [room, setRoom] = useState<Room | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,7 +62,7 @@ export default function RoomDetailScreen({ route, navigation }: Props) {
   if (!room) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
+        <ActivityIndicator size="large" color={colors.rooms.text} />
       </View>
     );
   }
@@ -96,19 +100,20 @@ export default function RoomDetailScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 24 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  name: { fontSize: 28, fontWeight: 'bold', color: '#111827' },
-  topic: { fontSize: 16, color: '#4b5563', marginTop: 8 },
-  meta: { fontSize: 14, color: '#9ca3af', marginTop: 8 },
-  error: { color: '#dc2626', fontSize: 16, textAlign: 'center' },
-  primaryButton: { backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 32 },
-  primaryText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  ownerActions: { flexDirection: 'row', gap: 12, marginTop: 12 },
-  flex: { flex: 1 },
-  secondaryButton: { borderWidth: 1, borderColor: '#2563eb', paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
-  secondaryText: { color: '#2563eb', fontSize: 16, fontWeight: '600' },
-  dangerButton: { borderWidth: 1, borderColor: '#dc2626', paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
-  dangerText: { color: '#dc2626', fontSize: 16, fontWeight: '600' },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.surface, padding: 24 },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+    name: { fontSize: 28, fontWeight: 'bold', color: c.text },
+    topic: { fontSize: 16, color: c.textSecondary, marginTop: 8 },
+    meta: { fontSize: 14, color: c.textMuted, marginTop: 8 },
+    error: { color: c.danger, fontSize: 16, textAlign: 'center' },
+    primaryButton: { backgroundColor: c.rooms.solid, paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 32 },
+    primaryText: { color: c.onAccent, fontSize: 16, fontWeight: '600' },
+    ownerActions: { flexDirection: 'row', gap: 12, marginTop: 12 },
+    flex: { flex: 1 },
+    secondaryButton: { borderWidth: 1, borderColor: c.rooms.text, paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
+    secondaryText: { color: c.rooms.text, fontSize: 16, fontWeight: '600' },
+    dangerButton: { borderWidth: 1, borderColor: c.danger, paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
+    dangerText: { color: c.danger, fontSize: 16, fontWeight: '600' },
+  });

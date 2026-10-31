@@ -5,9 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getErrorMessage } from '../api/errors';
 import { createMeeting, getMeeting, updateMeeting } from '../api/meetings';
 import DateTimeField from '../components/meetings/DateTimeField';
-import { DURATION_OPTIONS, MEETING } from '../components/meetings/theme';
+import { DURATION_OPTIONS } from '../components/meetings/theme';
 import UserSearch from '../components/UserSearch';
 import { RootStackParamList } from '../navigation/types';
+import { ThemeColors } from '../theme/colors';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { UserSummary } from '../types/chat';
 import { formatDuration, fromDateKey } from '../utils/date';
 
@@ -27,6 +29,8 @@ export default function MeetingFormScreen({ route, navigation }: Props) {
   const meetingId = route.params?.meetingId;
   const isEdit = !!meetingId;
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -99,7 +103,7 @@ export default function MeetingFormScreen({ route, navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={MEETING.primary} />
+        <ActivityIndicator size="large" color={colors.meetings.text} />
       </View>
     );
   }
@@ -110,7 +114,14 @@ export default function MeetingFormScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>Başlık</Text>
-        <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Örn. Haftalık planlama" maxLength={150} />
+        <TextInput
+          style={styles.input}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Örn. Haftalık planlama"
+          placeholderTextColor={colors.placeholder}
+          maxLength={150}
+        />
 
         <Text style={styles.label}>Açıklama</Text>
         <TextInput
@@ -118,6 +129,7 @@ export default function MeetingFormScreen({ route, navigation }: Props) {
           value={description}
           onChangeText={setDescription}
           placeholder="Gündem, notlar (isteğe bağlı)"
+          placeholderTextColor={colors.placeholder}
           maxLength={1000}
           multiline
         />
@@ -173,39 +185,41 @@ export default function MeetingFormScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: MEETING.background },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 16, paddingBottom: 32 },
-  label: { fontSize: 13, fontWeight: '700', color: MEETING.dark, marginTop: 16, marginBottom: 8 },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: MEETING.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  multiline: { minHeight: 80, textAlignVertical: 'top' },
-  warning: { color: '#92400e', backgroundColor: '#fef3c7', padding: 8, borderRadius: 8, marginTop: 8, fontSize: 13 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: MEETING.border,
-    backgroundColor: '#fff',
-  },
-  chipActive: { backgroundColor: MEETING.primary, borderColor: MEETING.primary },
-  chipText: { color: MEETING.dark, fontWeight: '600' },
-  chipTextActive: { color: '#fff' },
-  personChip: { backgroundColor: MEETING.light, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999 },
-  personChipText: { color: MEETING.dark, fontWeight: '600' },
-  hint: { color: '#6b7280', marginTop: 20 },
-  footer: { paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: MEETING.border, backgroundColor: '#fff' },
-  saveButton: { backgroundColor: MEETING.primary, paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
-  disabled: { opacity: 0.6 },
-  saveText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.meetings.faint },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    content: { padding: 16, paddingBottom: 32 },
+    label: { fontSize: 13, fontWeight: '700', color: c.meetings.onSoft, marginTop: 16, marginBottom: 8 },
+    input: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.meetings.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 16,
+      color: c.text,
+    },
+    multiline: { minHeight: 80, textAlignVertical: 'top' },
+    warning: { color: c.onWarningSoft, backgroundColor: c.warningSoft, padding: 8, borderRadius: 8, marginTop: 8, fontSize: 13 },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+    chip: {
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: c.meetings.border,
+      backgroundColor: c.surface,
+    },
+    chipActive: { backgroundColor: c.meetings.solid, borderColor: c.meetings.text },
+    chipText: { color: c.meetings.onSoft, fontWeight: '600' },
+    chipTextActive: { color: c.onAccent },
+    personChip: { backgroundColor: c.meetings.soft, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999 },
+    personChipText: { color: c.meetings.onSoft, fontWeight: '600' },
+    hint: { color: c.textTertiary, marginTop: 20 },
+    footer: { paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: c.meetings.border, backgroundColor: c.surface },
+    saveButton: { backgroundColor: c.meetings.solid, paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
+    disabled: { opacity: 0.6 },
+    saveText: { color: c.onAccent, fontSize: 16, fontWeight: '700' },
+  });

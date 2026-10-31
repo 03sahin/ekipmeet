@@ -4,12 +4,15 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-nativ
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { AuthStackParamList } from '../navigation/types';
-import { authStyles as s } from './authStyles';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
+import { makeAuthStyles } from './authStyles';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const { login } = useAuth();
+  const { colors } = useTheme();
+  const s = useThemedStyles(makeAuthStyles);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,7 @@ export default function LoginScreen({ navigation }: Props) {
       <TextInput
         style={s.input}
         placeholder="E-posta"
+        placeholderTextColor={colors.placeholder}
         value={email}
         onChangeText={setEmail} // Her tuşta state güncellenir (controlled input)
         autoCapitalize="none"
@@ -44,6 +48,7 @@ export default function LoginScreen({ navigation }: Props) {
       <TextInput
         style={s.input}
         placeholder="Şifre"
+        placeholderTextColor={colors.placeholder}
         value={password}
         onChangeText={setPassword}
         secureTextEntry // Şifreyi gizle

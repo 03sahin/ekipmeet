@@ -2,6 +2,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ThemeColors } from '../theme/colors';
+import { useThemedStyles } from '../theme/ThemeContext';
 
 export type BannerContent = { key: string; title: string; body: string; icon: 'chatbubble' | 'calendar' | 'alarm' };
 
@@ -12,6 +14,7 @@ const VISIBLE_MS = 4000;
 // Uygulama açıkken gelen bildirim: sistem bildirimi yerine üstten kayan kısa şerit
 export default function InAppBanner({ content, onPress, onHide }: Props) {
   const insets = useSafeAreaInsets();
+  const styles = useThemedStyles(makeStyles);
   const [translateY] = useState(() => new Animated.Value(-150)); // Bir kez oluşturulan animasyon değeri
 
   useEffect(() => {
@@ -44,25 +47,28 @@ export default function InAppBanner({ content, onPress, onHide }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: { position: 'absolute', left: 12, right: 12, zIndex: 1000, elevation: 10 },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#1f2937',
-    borderRadius: 14,
-    padding: 12,
-  },
-  icon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#16a34a',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  texts: { flex: 1 },
-  title: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  body: { color: '#d1d5db', fontSize: 13, marginTop: 2 },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    wrapper: { position: 'absolute', left: 12, right: 12, zIndex: 1000, elevation: 10 },
+    banner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: c.banner,
+      borderWidth: 1,
+      borderColor: c.bannerBorder,
+      borderRadius: 14,
+      padding: 12,
+    },
+    icon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: c.chats.solid,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    texts: { flex: 1 },
+    title: { color: c.bannerTitle, fontWeight: '700', fontSize: 15 },
+    body: { color: c.bannerBody, fontSize: 13, marginTop: 2 },
+  });

@@ -3,12 +3,14 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ImageProps, StyleSheet, View } from 'react-native';
 import { attachmentUrl } from '../../api/attachments';
 import { getValidAccessToken } from '../../api/client';
+import { useTheme } from '../../theme/ThemeContext';
 
 type Props = Omit<ImageProps, 'source'> & { attachmentId: string };
 
 // Dosya uç noktası token ister; Image'a adresle birlikte Authorization başlığını veririz.
 // Token kısa ömürlü olduğu için her gösterimde geçerli olanı alırız (gerekirse yenilenir).
 export default function AuthorizedImage({ attachmentId, style, ...rest }: Props) {
+  const { colors } = useTheme();
   const [token, setToken] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -35,9 +37,9 @@ export default function AuthorizedImage({ attachmentId, style, ...rest }: Props)
         />
       )}
       {failed ? (
-        <Ionicons name="image-outline" size={32} color="#9ca3af" />
+        <Ionicons name="image-outline" size={32} color={colors.textMuted} />
       ) : (
-        !loaded && <ActivityIndicator color="#9ca3af" />
+        !loaded && <ActivityIndicator color={colors.textMuted} />
       )}
     </View>
   );

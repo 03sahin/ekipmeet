@@ -9,6 +9,8 @@ import Avatar from '../components/Avatar';
 import UserSearch from '../components/UserSearch';
 import { RootStackParamList } from '../navigation/types';
 import { onHubEvent } from '../realtime/roomHub';
+import { ThemeColors } from '../theme/colors';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { ConversationDetail, UserSummary } from '../types/chat';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupInfo'>;
@@ -16,6 +18,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'GroupInfo'>;
 export default function GroupInfoScreen({ route, navigation }: Props) {
   const { conversationId } = route.params;
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [detail, setDetail] = useState<ConversationDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false); // Arama kutusu açık mı
@@ -86,7 +90,7 @@ export default function GroupInfoScreen({ route, navigation }: Props) {
   if (!detail) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.chats.text} />
       </View>
     );
   }
@@ -138,53 +142,54 @@ export default function GroupInfoScreen({ route, navigation }: Props) {
       </View>
 
       <Pressable style={styles.leaveButton} onPress={confirmLeave}>
-        <Ionicons name="exit-outline" size={22} color="#dc2626" />
+        <Ionicons name="exit-outline" size={22} color={colors.danger} />
         <Text style={styles.leaveText}>Gruptan ayrıl</Text>
       </Pressable>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f3f4f6' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  error: { color: '#dc2626', fontSize: 16, textAlign: 'center' },
-  header: { backgroundColor: '#fff', alignItems: 'center', paddingVertical: 24 },
-  title: { fontSize: 22, fontWeight: '700', color: '#111827', marginTop: 12 },
-  subtitle: { fontSize: 14, color: '#6b7280', marginTop: 4 },
-  section: { backgroundColor: '#fff', marginTop: 12, paddingHorizontal: 16, paddingVertical: 8 },
-  sectionTitle: { fontSize: 13, color: '#16a34a', fontWeight: '600', paddingVertical: 8 },
-  addRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-  addIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#16a34a',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addText: { fontSize: 16, color: '#16a34a', fontWeight: '600' },
-  search: { paddingVertical: 8 },
-  memberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-  memberName: { flex: 1, fontSize: 16, color: '#111827' },
-  ownerBadge: {
-    fontSize: 12,
-    color: '#166534',
-    backgroundColor: '#dcfce7',
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-  leaveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#fff',
-    marginTop: 12,
-    marginBottom: 32,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  leaveText: { fontSize: 16, color: '#dc2626', fontWeight: '600' },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+    error: { color: c.danger, fontSize: 16, textAlign: 'center' },
+    header: { backgroundColor: c.surface, alignItems: 'center', paddingVertical: 24 },
+    title: { fontSize: 22, fontWeight: '700', color: c.text, marginTop: 12 },
+    subtitle: { fontSize: 14, color: c.textTertiary, marginTop: 4 },
+    section: { backgroundColor: c.surface, marginTop: 12, paddingHorizontal: 16, paddingVertical: 8 },
+    sectionTitle: { fontSize: 13, color: c.chats.text, fontWeight: '600', paddingVertical: 8 },
+    addRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+    addIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: c.chats.solid,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    addText: { fontSize: 16, color: c.chats.text, fontWeight: '600' },
+    search: { paddingVertical: 8 },
+    memberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+    memberName: { flex: 1, fontSize: 16, color: c.text },
+    ownerBadge: {
+      fontSize: 12,
+      color: c.chats.onSoft,
+      backgroundColor: c.chats.soft,
+      paddingVertical: 2,
+      paddingHorizontal: 8,
+      borderRadius: 6,
+      overflow: 'hidden',
+    },
+    leaveButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: c.surface,
+      marginTop: 12,
+      marginBottom: 32,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+    },
+    leaveText: { fontSize: 16, color: c.danger, fontWeight: '600' },
+  });

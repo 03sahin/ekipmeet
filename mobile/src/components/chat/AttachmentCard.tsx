@@ -2,6 +2,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { ComponentProps, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatFileSize, openAttachment } from '../../api/attachments';
+import { ThemeColors } from '../../theme/colors';
+import { useTheme, useThemedStyles } from '../../theme/ThemeContext';
 import { AttachmentInfo } from '../../types/chat';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -16,6 +18,8 @@ function iconFor(contentType: string): IconName {
 
 // Belge eki: ad + boyut. Dokununca indirilir ve uygun bir uygulamayla açılır.
 export default function AttachmentCard({ attachment }: { attachment: AttachmentInfo }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [opening, setOpening] = useState(false);
 
   async function open() {
@@ -34,9 +38,9 @@ export default function AttachmentCard({ attachment }: { attachment: AttachmentI
     <Pressable style={({ pressed }) => [styles.card, pressed && styles.pressed]} onPress={open}>
       <View style={styles.icon}>
         {opening ? (
-          <ActivityIndicator color="#16a34a" />
+          <ActivityIndicator color={colors.chats.text} />
         ) : (
-          <Ionicons name={iconFor(attachment.contentType)} size={24} color="#16a34a" />
+          <Ionicons name={iconFor(attachment.contentType)} size={24} color={colors.chats.text} />
         )}
       </View>
       <View style={styles.info}>
@@ -45,31 +49,32 @@ export default function AttachmentCard({ attachment }: { attachment: AttachmentI
         </Text>
         <Text style={styles.size}>{formatFileSize(attachment.sizeBytes)}</Text>
       </View>
-      <Ionicons name="download-outline" size={20} color="#6b7280" />
+      <Ionicons name="download-outline" size={20} color={colors.bubbleTime} />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 8,
-    padding: 10,
-    minWidth: 220,
-  },
-  pressed: { opacity: 0.7 },
-  icon: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#dcfce7',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  info: { flex: 1 },
-  name: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  size: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: c.attachmentCard,
+      borderRadius: 8,
+      padding: 10,
+      minWidth: 220,
+    },
+    pressed: { opacity: 0.7 },
+    icon: {
+      width: 40,
+      height: 40,
+      borderRadius: 8,
+      backgroundColor: c.chats.soft,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    info: { flex: 1 },
+    name: { fontSize: 14, fontWeight: '600', color: c.bubbleText },
+    size: { fontSize: 12, color: c.bubbleTime, marginTop: 2 },
+  });

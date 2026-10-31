@@ -1,14 +1,19 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker, { DateTimePickerAndroid, DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ThemeColors } from '../../theme/colors';
+import { useTheme, useThemedStyles } from '../../theme/ThemeContext';
 import { formatClock, formatLongDate } from '../../utils/date';
-import { MEETING } from './theme';
 
 type Props = { value: Date; onChange: (date: Date) => void; minimumDate?: Date };
 
 // Tarih ve saat ayrı ayrı seçilir; seçilen değer cihazın yerel saatindedir (gönderirken toISOString UTC'ye çevirir)
 export default function DateTimeField({ value, onChange, minimumDate }: Props) {
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+
   // Android: sistemin açılır penceresi. "Tamam"a basınca type === 'set' gelir, "İptal"de değişiklik yok.
+  // Pencerenin açık/koyu hâli uygulamanın temasını izler (ThemeProvider bunu native tarafa iletir).
   function openAndroid(mode: 'date' | 'time') {
     DateTimePickerAndroid.open({
       value,
@@ -30,7 +35,8 @@ export default function DateTimeField({ value, onChange, minimumDate }: Props) {
           display="compact"
           minimumDate={minimumDate}
           locale="tr-TR"
-          accentColor={MEETING.primary}
+          accentColor={colors.meetings.text}
+          themeVariant={isDark ? 'dark' : 'light'}
           onChange={(_, d) => d && onChange(merge(value, d, 'date'))}
         />
         <DateTimePicker
@@ -38,7 +44,8 @@ export default function DateTimeField({ value, onChange, minimumDate }: Props) {
           mode="time"
           display="compact"
           locale="tr-TR"
-          accentColor={MEETING.primary}
+          accentColor={colors.meetings.text}
+          themeVariant={isDark ? 'dark' : 'light'}
           onChange={(_, d) => d && onChange(merge(value, d, 'time'))}
         />
       </View>
@@ -48,11 +55,11 @@ export default function DateTimeField({ value, onChange, minimumDate }: Props) {
   return (
     <View style={styles.row}>
       <Pressable style={[styles.field, styles.dateField]} onPress={() => openAndroid('date')}>
-        <Ionicons name="calendar-outline" size={18} color={MEETING.primary} />
+        <Ionicons name="calendar-outline" size={18} color={colors.meetings.text} />
         <Text style={styles.fieldText}>{formatLongDate(value)}</Text>
       </Pressable>
       <Pressable style={styles.field} onPress={() => openAndroid('time')}>
-        <Ionicons name="time-outline" size={18} color={MEETING.primary} />
+        <Ionicons name="time-outline" size={18} color={colors.meetings.text} />
         <Text style={styles.fieldText}>{formatClock(value)}</Text>
       </Pressable>
     </View>
@@ -67,20 +74,21 @@ function merge(current: Date, picked: Date, mode: 'date' | 'time'): Date {
   return result;
 }
 
-const styles = StyleSheet.create({
-  iosRow: { flexDirection: 'row', gap: 8 },
-  row: { flexDirection: 'row', gap: 8 },
-  field: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: MEETING.border,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  dateField: { flex: 1 },
-  fieldText: { fontSize: 15, color: '#111827' },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    iosRow: { flexDirection: 'row', gap: 8 },
+    row: { flexDirection: 'row', gap: 8 },
+    field: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      borderWidth: 1,
+      borderColor: c.meetings.border,
+      backgroundColor: c.surface,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+    },
+    dateField: { flex: 1 },
+    fieldText: { fontSize: 15, color: c.text },
+  });

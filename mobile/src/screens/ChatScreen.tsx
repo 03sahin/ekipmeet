@@ -33,6 +33,8 @@ import AttachmentSheet, { AttachmentSource } from '../components/chat/Attachment
 import AuthorizedImage from '../components/chat/AuthorizedImage';
 import { RootStackParamList } from '../navigation/types';
 import { closeConversation, connectRoomHub, onHubEvent, onReconnected, openConversation } from '../realtime/roomHub';
+import { ThemeColors } from '../theme/colors';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { ConversationDetail, ConversationMessage } from '../types/chat';
 import { formatTime, mergeById } from '../utils/format';
 
@@ -58,6 +60,8 @@ export default function ChatScreen({ route, navigation }: Props) {
   const { user } = useAuth();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [detail, setDetail] = useState<ConversationDetail | null>(null);
   const [messages, setMessages] = useState<ConversationMessage[]>([]); // Eskiden yeniye
@@ -88,12 +92,12 @@ export default function ChatScreen({ route, navigation }: Props) {
       headerRight: isGroup
         ? () => (
             <Pressable onPress={() => navigation.navigate('GroupInfo', { conversationId })} hitSlop={8}>
-              <Ionicons name="information-circle-outline" size={26} color="#16a34a" />
+              <Ionicons name="information-circle-outline" size={26} color={colors.chats.text} />
             </Pressable>
           )
         : undefined,
     });
-  }, [navigation, detail, isGroup, conversationId, route.params.title]);
+  }, [navigation, detail, isGroup, conversationId, route.params.title, colors]);
 
   // İlk yükleme: detay + son 50 mesaj, sonra okundu işaretle
   useEffect(() => {
@@ -256,7 +260,7 @@ export default function ChatScreen({ route, navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color={colors.chats.text} />
       </View>
     );
   }
@@ -289,7 +293,7 @@ export default function ChatScreen({ route, navigation }: Props) {
           inverted // Alttan başlar; "liste sonu" en üstte olur
           onEndReached={loadOlder} // Yukarı kaydırıp en üste gelince eski mesajlar
           onEndReachedThreshold={0.3}
-          ListFooterComponent={loadingOlder ? <ActivityIndicator style={styles.older} color="#16a34a" /> : undefined}
+          ListFooterComponent={loadingOlder ? <ActivityIndicator style={styles.older} color={colors.chats.text} /> : undefined}
           contentContainerStyle={styles.messages}
           renderItem={({ item, index }) => {
             const mine = item.senderId === user?.id;
@@ -320,7 +324,7 @@ export default function ChatScreen({ route, navigation }: Props) {
 
       {upload && (
         <View style={styles.uploadBar}>
-          <Ionicons name="cloud-upload-outline" size={20} color="#16a34a" />
+          <Ionicons name="cloud-upload-outline" size={20} color={colors.chats.text} />
           <View style={styles.uploadInfo}>
             <Text style={styles.uploadName} numberOfLines={1}>
               {upload.name}
@@ -337,7 +341,7 @@ export default function ChatScreen({ route, navigation }: Props) {
             </View>
           </View>
           <Pressable onPress={() => abortRef.current?.abort()} hitSlop={8} accessibilityLabel="Yüklemeyi iptal et">
-            <Ionicons name="close-circle" size={24} color="#dc2626" />
+            <Ionicons name="close-circle" size={24} color={colors.danger} />
           </Pressable>
         </View>
       )}
@@ -349,13 +353,14 @@ export default function ChatScreen({ route, navigation }: Props) {
           disabled={!!upload}
           accessibilityLabel="Dosya ekle"
         >
-          <Ionicons name="attach" size={24} color="#4b5563" />
+          <Ionicons name="attach" size={24} color={colors.textSecondary} />
         </Pressable>
         <TextInput
           style={styles.input}
           value={text}
           onChangeText={setText}
           placeholder="Mesaj"
+          placeholderTextColor={colors.placeholder}
           maxLength={MAX_LENGTH}
           multiline
         />
@@ -373,66 +378,68 @@ export default function ChatScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#efeae2' }, // Mesajlaşma uygulaması tarzı açık bej zemin
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  error: { color: '#dc2626', fontSize: 16, textAlign: 'center' },
-  hint: { color: '#6b7280' },
-  older: { marginVertical: 12 },
-  messages: { paddingHorizontal: 10, paddingVertical: 8 },
-  bubble: {
-    maxWidth: '80%',
-    borderRadius: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    marginVertical: 2,
-    elevation: 1,
-  },
-  bubbleMine: { alignSelf: 'flex-end', backgroundColor: '#d9fdd3', borderTopRightRadius: 2 },
-  bubbleOther: { alignSelf: 'flex-start', backgroundColor: '#fff', borderTopLeftRadius: 2 },
-  sender: { fontSize: 13, fontWeight: '700', color: '#16a34a', marginBottom: 2 },
-  text: { color: '#111827', fontSize: 15 },
-  caption: { marginTop: 6 },
-  imagePreview: { width: 220, height: 220, borderRadius: 8, backgroundColor: '#e5e7eb' },
-  uploadBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginHorizontal: 8,
-    marginTop: 6,
-    padding: 10,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-  },
-  uploadInfo: { flex: 1 },
-  uploadName: { fontSize: 13, color: '#111827', marginBottom: 6 },
-  progressTrack: { height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', overflow: 'hidden' },
-  progressFill: { height: 4, backgroundColor: '#16a34a' },
-  attachButton: { width: 40, height: 44, justifyContent: 'center', alignItems: 'center' },
-  time: { fontSize: 11, color: '#6b7280', marginTop: 2, alignSelf: 'flex-end' },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    paddingHorizontal: 8,
-    paddingTop: 8,
-  },
-  input: {
-    flex: 1,
-    maxHeight: 120,
-    backgroundColor: '#fff',
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#16a34a',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendDisabled: { opacity: 0.5 },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.chatWallpaper }, // Mesajlaşma uygulaması tarzı zemin (açıkta bej)
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+    error: { color: c.danger, fontSize: 16, textAlign: 'center' },
+    hint: { color: c.textTertiary },
+    older: { marginVertical: 12 },
+    messages: { paddingHorizontal: 10, paddingVertical: 8 },
+    bubble: {
+      maxWidth: '80%',
+      borderRadius: 10,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      marginVertical: 2,
+      elevation: 1,
+    },
+    bubbleMine: { alignSelf: 'flex-end', backgroundColor: c.bubbleMine, borderTopRightRadius: 2 },
+    bubbleOther: { alignSelf: 'flex-start', backgroundColor: c.bubbleOther, borderTopLeftRadius: 2 },
+    sender: { fontSize: 13, fontWeight: '700', color: c.chats.text, marginBottom: 2 },
+    text: { color: c.bubbleText, fontSize: 15 },
+    caption: { marginTop: 6 },
+    imagePreview: { width: 220, height: 220, borderRadius: 8, backgroundColor: c.surfaceMuted },
+    uploadBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginHorizontal: 8,
+      marginTop: 6,
+      padding: 10,
+      borderRadius: 12,
+      backgroundColor: c.surface,
+    },
+    uploadInfo: { flex: 1 },
+    uploadName: { fontSize: 13, color: c.text, marginBottom: 6 },
+    progressTrack: { height: 4, borderRadius: 2, backgroundColor: c.border, overflow: 'hidden' },
+    progressFill: { height: 4, backgroundColor: c.chats.solid },
+    attachButton: { width: 40, height: 44, justifyContent: 'center', alignItems: 'center' },
+    time: { fontSize: 11, color: c.bubbleTime, marginTop: 2, alignSelf: 'flex-end' },
+    inputBar: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 8,
+      paddingHorizontal: 8,
+      paddingTop: 8,
+    },
+    input: {
+      flex: 1,
+      maxHeight: 120,
+      backgroundColor: c.chatInput,
+      color: c.text,
+      borderRadius: 22,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      fontSize: 16,
+    },
+    sendButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: c.chats.solid,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    sendDisabled: { opacity: 0.5 },
+  });

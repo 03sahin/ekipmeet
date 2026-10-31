@@ -5,9 +5,11 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, Text
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getErrorMessage } from '../api/errors';
 import { createInstantMeeting } from '../api/meetings';
-import { MEETING } from '../components/meetings/theme';
+
 import UserSearch from '../components/UserSearch';
 import { RootStackParamList } from '../navigation/types';
+import { ThemeColors } from '../theme/colors';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { UserSummary } from '../types/chat';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InstantMeeting'>;
@@ -15,6 +17,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'InstantMeeting'>;
 // Hemen başlayan 60 dakikalık toplantı: başlık ve katılımcılar isteğe bağlı
 export default function InstantMeetingScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [title, setTitle] = useState('');
   const [participants, setParticipants] = useState<UserSummary[]>([]);
   const [busy, setBusy] = useState(false);
@@ -41,7 +45,7 @@ export default function InstantMeetingScreen({ navigation }: Props) {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
-          <Ionicons name="flash" size={32} color={MEETING.primary} />
+          <Ionicons name="flash" size={32} color={colors.meetings.text} />
           <Text style={styles.heroText}>Şimdi başlar, 60 dakika sürer.</Text>
         </View>
 
@@ -51,6 +55,7 @@ export default function InstantMeetingScreen({ navigation }: Props) {
           value={title}
           onChangeText={setTitle}
           placeholder="Hızlı toplantı"
+          placeholderTextColor={colors.placeholder}
           maxLength={150}
         />
 
@@ -83,42 +88,44 @@ export default function InstantMeetingScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: MEETING.background },
-  content: { padding: 16 },
-  hero: {
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: MEETING.light,
-    borderRadius: 16,
-    paddingVertical: 20,
-    borderWidth: 1,
-    borderColor: MEETING.border,
-  },
-  heroText: { color: MEETING.dark, fontWeight: '600' },
-  label: { fontSize: 13, fontWeight: '700', color: MEETING.dark, marginTop: 18, marginBottom: 8 },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: MEETING.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  chip: { backgroundColor: MEETING.light, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999 },
-  chipText: { color: MEETING.dark, fontWeight: '600' },
-  footer: { paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: MEETING.border, backgroundColor: '#fff' },
-  startButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: MEETING.primary,
-    paddingVertical: 14,
-    borderRadius: 10,
-  },
-  disabled: { opacity: 0.6 },
-  startText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.meetings.faint },
+    content: { padding: 16 },
+    hero: {
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: c.meetings.soft,
+      borderRadius: 16,
+      paddingVertical: 20,
+      borderWidth: 1,
+      borderColor: c.meetings.border,
+    },
+    heroText: { color: c.meetings.onSoft, fontWeight: '600' },
+    label: { fontSize: 13, fontWeight: '700', color: c.meetings.onSoft, marginTop: 18, marginBottom: 8 },
+    input: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.meetings.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 16,
+      color: c.text,
+    },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+    chip: { backgroundColor: c.meetings.soft, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999 },
+    chipText: { color: c.meetings.onSoft, fontWeight: '600' },
+    footer: { paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: c.meetings.border, backgroundColor: c.surface },
+    startButton: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: c.meetings.solid,
+      paddingVertical: 14,
+      borderRadius: 10,
+    },
+    disabled: { opacity: 0.6 },
+    startText: { color: c.onAccent, fontSize: 16, fontWeight: '700' },
+  });

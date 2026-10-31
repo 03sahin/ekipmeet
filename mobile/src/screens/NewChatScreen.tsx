@@ -7,12 +7,16 @@ import { createDirect, createGroup } from '../api/chat';
 import { getErrorMessage } from '../api/errors';
 import UserSearch from '../components/UserSearch';
 import { RootStackParamList } from '../navigation/types';
+import { ThemeColors } from '../theme/colors';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { UserSummary } from '../types/chat';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'NewChat'>;
 
 export default function NewChatScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [groupMode, setGroupMode] = useState(false);
   const [selected, setSelected] = useState<UserSummary[]>([]); // Aramalar değişse de seçilenler kalsın
   const [groupName, setGroupName] = useState('');
@@ -63,7 +67,7 @@ export default function NewChatScreen({ navigation }: Props) {
             setSelected([]);
           }}
         >
-          <Ionicons name={groupMode ? 'person-outline' : 'people-outline'} size={22} color="#16a34a" />
+          <Ionicons name={groupMode ? 'person-outline' : 'people-outline'} size={22} color={colors.chats.text} />
           <Text style={styles.modeText}>{groupMode ? 'Birebir sohbete dön' : 'Grup oluştur'}</Text>
         </Pressable>
 
@@ -74,6 +78,7 @@ export default function NewChatScreen({ navigation }: Props) {
               value={groupName}
               onChangeText={setGroupName}
               placeholder="Grup adı"
+              placeholderTextColor={colors.placeholder}
               maxLength={100}
             />
             {selected.length > 0 && (
@@ -95,7 +100,7 @@ export default function NewChatScreen({ navigation }: Props) {
           placeholder={groupMode ? 'Gruba eklenecek kişiyi ara...' : 'Kime yazmak istiyorsun?'}
           autoFocus
         />
-        {busy && !groupMode && <ActivityIndicator style={styles.busy} color="#16a34a" />}
+        {busy && !groupMode && <ActivityIndicator style={styles.busy} color={colors.chats.text} />}
       </ScrollView>
 
       {groupMode && (
@@ -117,28 +122,30 @@ export default function NewChatScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 16 },
-  modeButton: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, marginBottom: 8 },
-  pressed: { opacity: 0.6 },
-  modeText: { fontSize: 16, color: '#16a34a', fontWeight: '600' },
-  nameInput: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  chip: { backgroundColor: '#dcfce7', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999 },
-  chipText: { color: '#166534', fontWeight: '600' },
-  sectionTitle: { fontSize: 13, color: '#6b7280', fontWeight: '600', marginBottom: 8 },
-  busy: { marginTop: 16 },
-  footer: { paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#e5e7eb' },
-  createButton: { backgroundColor: '#16a34a', paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
-  disabled: { opacity: 0.5 },
-  createText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.surface },
+    content: { padding: 16 },
+    modeButton: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, marginBottom: 8 },
+    pressed: { opacity: 0.6 },
+    modeText: { fontSize: 16, color: c.chats.text, fontWeight: '600' },
+    nameInput: {
+      borderWidth: 1,
+      borderColor: c.inputBorder,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      fontSize: 16,
+      color: c.text,
+      marginBottom: 12,
+    },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+    chip: { backgroundColor: c.chats.soft, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999 },
+    chipText: { color: c.chats.onSoft, fontWeight: '600' },
+    sectionTitle: { fontSize: 13, color: c.textTertiary, fontWeight: '600', marginBottom: 8 },
+    busy: { marginTop: 16 },
+    footer: { paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: c.border },
+    createButton: { backgroundColor: c.chats.solid, paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
+    disabled: { opacity: 0.5 },
+    createText: { color: c.onAccent, fontSize: 16, fontWeight: '600' },
+  });

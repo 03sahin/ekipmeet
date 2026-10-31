@@ -19,6 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { connectRoomHub, getHubErrorMessage, leaveRoom, onHubEvent, onReconnected } from '../realtime/roomHub';
+import { ThemeColors } from '../theme/colors';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { roomCallKey } from '../types/call';
 import { ChatMessage, JoinRoomResult, RoomMember } from '../types/room';
 
@@ -38,6 +40,8 @@ export default function RoomLiveScreen({ route, navigation }: Props) {
   const { user } = useAuth();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [members, setMembers] = useState<RoomMember[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -116,7 +120,7 @@ export default function RoomLiveScreen({ route, navigation }: Props) {
   if (!joined) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
+        <ActivityIndicator size="large" color={colors.rooms.text} />
         <Text style={styles.hint}>Odaya bağlanılıyor...</Text>
       </View>
     );
@@ -183,6 +187,7 @@ export default function RoomLiveScreen({ route, navigation }: Props) {
           value={text}
           onChangeText={setText}
           placeholder="Mesaj yaz..."
+          placeholderTextColor={colors.placeholder}
           maxLength={MAX_LENGTH}
           multiline
         />
@@ -198,65 +203,67 @@ export default function RoomLiveScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f3f4f6' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  error: { color: '#dc2626', fontSize: 16, textAlign: 'center' },
-  hint: { color: '#6b7280', marginTop: 12 },
-  membersBar: { backgroundColor: '#fff', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
-  membersHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: 16,
-    marginBottom: 6,
-  },
-  membersTitle: { fontSize: 13, color: '#6b7280', fontWeight: '600' },
-  videoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#16a34a',
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  videoText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  chips: { paddingHorizontal: 16, gap: 8 },
-  chip: { backgroundColor: '#f3f4f6', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999 },
-  chipMe: { backgroundColor: '#dbeafe' },
-  chipText: { fontSize: 13, color: '#111827' },
-  banner: { backgroundColor: '#fef2f2', color: '#dc2626', padding: 8, textAlign: 'center' },
-  messages: { padding: 12 },
-  bubble: { maxWidth: '80%', borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12, marginVertical: 4 },
-  bubbleMine: { alignSelf: 'flex-end', backgroundColor: '#2563eb' },
-  bubbleOther: { alignSelf: 'flex-start', backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb' },
-  sender: { fontSize: 12, fontWeight: '600', color: '#2563eb', marginBottom: 2 },
-  textMine: { color: '#fff', fontSize: 15 },
-  textOther: { color: '#111827', fontSize: 15 },
-  time: { fontSize: 11, color: '#9ca3af', marginTop: 4, alignSelf: 'flex-end' },
-  timeMine: { color: '#bfdbfe' },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-  },
-  input: {
-    flex: 1,
-    maxHeight: 120,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    fontSize: 15,
-  },
-  sendButton: { backgroundColor: '#2563eb', borderRadius: 20, paddingVertical: 10, paddingHorizontal: 16 },
-  sendDisabled: { opacity: 0.5 },
-  sendText: { color: '#fff', fontWeight: '600' },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+    error: { color: c.danger, fontSize: 16, textAlign: 'center' },
+    hint: { color: c.textTertiary, marginTop: 12 },
+    membersBar: { backgroundColor: c.surface, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.border },
+    membersHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginHorizontal: 16,
+      marginBottom: 6,
+    },
+    membersTitle: { fontSize: 13, color: c.textTertiary, fontWeight: '600' },
+    videoButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: c.chats.solid,
+      borderRadius: 999,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+    },
+    videoText: { color: c.onAccent, fontWeight: '700', fontSize: 13 },
+    chips: { paddingHorizontal: 16, gap: 8 },
+    chip: { backgroundColor: c.surfaceMuted, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999 },
+    chipMe: { backgroundColor: c.rooms.soft },
+    chipText: { fontSize: 13, color: c.text },
+    banner: { backgroundColor: c.dangerSoft, color: c.danger, padding: 8, textAlign: 'center' },
+    messages: { padding: 12 },
+    bubble: { maxWidth: '80%', borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12, marginVertical: 4 },
+    bubbleMine: { alignSelf: 'flex-end', backgroundColor: c.rooms.solid },
+    bubbleOther: { alignSelf: 'flex-start', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
+    sender: { fontSize: 12, fontWeight: '600', color: c.rooms.text, marginBottom: 2 },
+    textMine: { color: c.onAccent, fontSize: 15 },
+    textOther: { color: c.text, fontSize: 15 },
+    time: { fontSize: 11, color: c.textMuted, marginTop: 4, alignSelf: 'flex-end' },
+    timeMine: { color: '#bfdbfe' },
+    inputBar: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 8,
+      paddingHorizontal: 12,
+      paddingTop: 8,
+      backgroundColor: c.surface,
+      borderTopWidth: 1,
+      borderTopColor: c.border,
+    },
+    input: {
+      flex: 1,
+      maxHeight: 120,
+      borderWidth: 1,
+      borderColor: c.inputBorder,
+      borderRadius: 20,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      fontSize: 15,
+      color: c.text,
+    },
+    sendButton: { backgroundColor: c.rooms.solid, borderRadius: 20, paddingVertical: 10, paddingHorizontal: 16 },
+    sendDisabled: { opacity: 0.5 },
+    sendText: { color: c.onAccent, fontWeight: '600' },
+  });

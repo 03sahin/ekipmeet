@@ -2,6 +2,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { ComponentProps } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ThemeColors } from '../../theme/colors';
+import { useThemedStyles } from '../../theme/ThemeContext';
 
 export type AttachmentSource = 'gallery' | 'camera' | 'document';
 
@@ -16,6 +18,7 @@ const OPTIONS: { source: AttachmentSource; label: string; icon: ComponentProps<t
 // Ek butonuna basınca alttan açılan seçim menüsü (Android'de Alert en fazla 3 buton gösterir)
 export default function AttachmentSheet({ visible, onClose, onSelect }: Props) {
   const insets = useSafeAreaInsets();
+  const styles = useThemedStyles(makeStyles);
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
@@ -44,13 +47,14 @@ export default function AttachmentSheet({ visible, onClose, onSelect }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
-  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 16 },
-  title: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 16 },
-  row: { flexDirection: 'row', justifyContent: 'space-around' },
-  option: { alignItems: 'center', width: 100 },
-  circle: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
-  label: { marginTop: 8, fontSize: 13, color: '#374151', textAlign: 'center' },
-  hint: { marginTop: 16, fontSize: 12, color: '#9ca3af', textAlign: 'center' },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    backdrop: { flex: 1, backgroundColor: c.backdrop },
+    sheet: { backgroundColor: c.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 16 },
+    title: { fontSize: 16, fontWeight: '700', color: c.text, marginBottom: 16 },
+    row: { flexDirection: 'row', justifyContent: 'space-around' },
+    option: { alignItems: 'center', width: 100 },
+    circle: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
+    label: { marginTop: 8, fontSize: 13, color: c.textSecondary, textAlign: 'center' },
+    hint: { marginTop: 16, fontSize: 12, color: c.textMuted, textAlign: 'center' },
+  });
