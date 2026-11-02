@@ -13,6 +13,7 @@ export type LastMessagePreview = {
   createdAt: string;
   attachmentName: string | null; // Ekli mesajsa dosya adı
   attachmentIsImage: boolean;
+  isDeleted: boolean; // Son mesaj silinmişse text "Bu mesaj silindi" gelir
 };
 
 // Mesaj eki; dosyanın kendisi GET /api/attachments/{id} ile (token'la) indirilir
@@ -59,4 +60,5 @@ export type ConversationMessage = {
   text: string; // Ekli mesajda boş olabilir
   createdAt: string;
   attachment: AttachmentInfo | null;
+  isDeleted: boolean; // Herkes için silindi: text boş, attachment null gelir
 };

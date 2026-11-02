@@ -31,7 +31,11 @@ export const sendMessage = (id: string, text: string) =>
     body: JSON.stringify({ text }),
   });
 
-export const markRead = (id: string) => apiFetch<void>(`/api/conversations/${id}/read`, { method: 'POST' });
+// Sadece kendi mesajını, herkes için siler
+export const deleteMessage = (conversationId: string, messageId: number) =>
+  apiFetch<void>(`/api/conversations/${conversationId}/messages/${messageId}`, { method: 'DELETE' });
+
+export const markRead =(id: string) => apiFetch<void>(`/api/conversations/${id}/read`, { method: 'POST' });
 
 export const addMember = (id: string, userId: string) =>
   apiFetch<ConversationDetail>(`/api/conversations/${id}/members`, {

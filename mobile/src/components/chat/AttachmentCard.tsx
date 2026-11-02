@@ -17,7 +17,8 @@ function iconFor(contentType: string): IconName {
 }
 
 // Belge eki: ad + boyut. Dokununca indirilir ve uygun bir uygulamayla açılır.
-export default function AttachmentCard({ attachment }: { attachment: AttachmentInfo }) {
+// onLongPress: kendi mesajında kart da uzun basınca mesaj menüsünü açsın (kartın basışı baloncuğa ulaşmaz)
+export default function AttachmentCard({ attachment, onLongPress }: { attachment: AttachmentInfo; onLongPress?: () => void }) {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const [opening, setOpening] = useState(false);
@@ -35,7 +36,7 @@ export default function AttachmentCard({ attachment }: { attachment: AttachmentI
   }
 
   return (
-    <Pressable style={({ pressed }) => [styles.card, pressed && styles.pressed]} onPress={open}>
+    <Pressable style={({ pressed }) => [styles.card, pressed && styles.pressed]} onPress={open} onLongPress={onLongPress}>
       <View style={styles.icon}>
         {opening ? (
           <ActivityIndicator color={colors.chats.text} />

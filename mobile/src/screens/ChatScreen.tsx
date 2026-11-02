@@ -25,12 +25,13 @@ import {
   uploadAttachment,
   UploadProgress,
 } from '../api/attachments';
-import { getConversation, getMessages, markRead, MESSAGE_PAGE_SIZE, sendMessage } from '../api/chat';
+import { deleteMessage, getConversation, getMessages, markRead, MESSAGE_PAGE_SIZE, sendMessage } from '../api/chat';
 import { getErrorMessage } from '../api/errors';
 import { useAuth } from '../auth/AuthContext';
 import AttachmentCard from '../components/chat/AttachmentCard';
 import AttachmentSheet, { AttachmentSource } from '../components/chat/AttachmentSheet';
 import AuthorizedImage from '../components/chat/AuthorizedImage';
+import MessageActionsSheet from '../components/chat/MessageActionsSheet';
 import { RootStackParamList } from '../navigation/types';
 import { closeConversation, connectRoomHub, onHubEvent, onReconnected, openConversation } from '../realtime/roomHub';
 import { ThemeColors } from '../theme/colors';
@@ -55,6 +56,11 @@ const DOCUMENT_TYPES = [
 
 type UploadState = { name: string; progress: UploadProgress | null };
 
+// Silinen mesaj listede yerinde kalır; içeriği ve eki atılır
+function markDeleted(list: ConversationMessage[], id: number): ConversationMessage[] {
+  return list.map((m) => (m.id === id ? { ...m, text: '', attachment: null, isDeleted: true } : m));
+}
+
 export default function ChatScreen({ route, navigation }: Props) {
   const { conversationId } = route.params;
   const { user } = useAuth();
@@ -73,6 +79,7 @@ export default function ChatScreen({ route, navigation }: Props) {
   const [sending, setSending] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);
   const [upload, setUpload] = useState<UploadState | null>(null);
+  const [actionTarget, setActionTarget] = useState<ConversationMessage | null>(null); // Uzun basılan kendi mesajım
   const abortRef = useRef<AbortController | null>(null);
 
   const isGroup = detail?.type === 'Group';
@@ -129,6 +136,10 @@ export default function ChatScreen({ route, navigation }: Props) {
       // Ekran açıkken (ve uygulama ön plandayken) gelen mesaj okunmuş sayılır
       if (m.senderId !== user?.id && AppState.currentState === 'active') read();
     });
+    // Mesaj (bu cihazdan ya da başka bir cihazdan) herkes için silindi
+    const offDeleted = onHubEvent('MessageDeleted', (id: string, messageId: number) => {
+      if (id === conversationId) setMessages((prev) => markDeleted(prev, messageId));
+    });
     const offChanged = onHubEvent('ConversationChanged', (id: string) => {
       if (id === conversationId) loadDetail(); // Üye eklendi/ayrıldı
     });
@@ -158,6 +169,7 @@ export default function ChatScreen({ route, navigation }: Props) {
 
     return () => {
       offMessage();
+      offDeleted();
       offChanged();
       offRemoved();
       offReconnected();
@@ -193,6 +205,24 @@ export default function ChatScreen({ route, navigation }: Props) {
     } finally {
       setSending(false);
     }
+  }
+
+  function confirmDelete(message: ConversationMessage) {
+    Alert.alert('Mesajı sil', 'Bu mesaj herkes için silinecek.', [
+      { text: 'İptal', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteMessage(conversationId, message.id);
+            setMessages((prev) => markDeleted(prev, message.id)); // Canlı olay da gelir; ikisi aynı sonucu verir
+          } catch (e) {
+            Alert.alert('Silinemedi', getErrorMessage(e));
+          }
+        },
+      },
+    ]);
   }
 
   // Ekrandan çıkılırsa süren yükleme iptal edilsin
@@ -300,23 +330,43 @@ export default function ChatScreen({ route, navigation }: Props) {
             // Grupta, art arda aynı kişinin mesajlarında adı sadece ilkinde göster
             const previous = reversed[index + 1];
             const showName = isGroup && !mine && previous?.senderId !== item.senderId;
-            const attachment = item.attachment;
+            const deleted = item.isDeleted;
+            const attachment = deleted ? null : item.attachment;
+            // Sadece kendi (silinmemiş) mesajımda menü açılır; karşı tarafın mesajında uzun basma bir şey yapmaz
+            const openActions = mine && !deleted ? () => setActionTarget(item) : undefined;
             return (
-              <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
+              <Pressable
+                style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}
+                onLongPress={openActions}
+                delayLongPress={350}
+              >
                 {showName && <Text style={styles.sender}>{item.senderName}</Text>}
-                {attachment?.isImage && (
-                  <Pressable
-                    onPress={() =>
-                      navigation.navigate('ImageViewer', { attachmentId: attachment.id, name: attachment.originalName })
-                    }
-                  >
-                    <AuthorizedImage attachmentId={attachment.id} style={styles.imagePreview} resizeMode="cover" />
-                  </Pressable>
+                {deleted ? (
+                  <View style={styles.deletedRow}>
+                    <Ionicons name="ban-outline" size={15} color={colors.bubbleTime} />
+                    <Text style={styles.deletedText}>Bu mesaj silindi</Text>
+                  </View>
+                ) : (
+                  <>
+                    {attachment?.isImage && (
+                      <Pressable
+                        onPress={() =>
+                          navigation.navigate('ImageViewer', { attachmentId: attachment.id, name: attachment.originalName })
+                        }
+                        onLongPress={openActions}
+                        delayLongPress={350}
+                      >
+                        <AuthorizedImage attachmentId={attachment.id} style={styles.imagePreview} resizeMode="cover" />
+                      </Pressable>
+                    )}
+                    {attachment && !attachment.isImage && (
+                      <AttachmentCard attachment={attachment} onLongPress={openActions} />
+                    )}
+                    {item.text.length > 0 && <Text style={[styles.text, attachment && styles.caption]}>{item.text}</Text>}
+                  </>
                 )}
-                {attachment && !attachment.isImage && <AttachmentCard attachment={attachment} />}
-                {item.text.length > 0 && <Text style={[styles.text, attachment && styles.caption]}>{item.text}</Text>}
                 <Text style={styles.time}>{formatTime(item.createdAt)}</Text>
-              </View>
+              </Pressable>
             );
           }}
         />
@@ -374,6 +424,11 @@ export default function ChatScreen({ route, navigation }: Props) {
       </View>
 
       <AttachmentSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} onSelect={sendAttachment} />
+      <MessageActionsSheet
+        visible={actionTarget !== null}
+        onClose={() => setActionTarget(null)}
+        onDelete={() => actionTarget && confirmDelete(actionTarget)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -399,6 +454,8 @@ const makeStyles = (c: ThemeColors) =>
     sender: { fontSize: 13, fontWeight: '700', color: c.chats.text, marginBottom: 2 },
     text: { color: c.bubbleText, fontSize: 15 },
     caption: { marginTop: 6 },
+    deletedRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    deletedText: { color: c.bubbleTime, fontSize: 15, fontStyle: 'italic' }, // Soluk ve italik; iki temada da okunur
     imagePreview: { width: 220, height: 220, borderRadius: 8, backgroundColor: c.surfaceMuted },
     uploadBar: {
       flexDirection: 'row',

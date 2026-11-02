@@ -75,6 +75,7 @@ export default function ConversationsScreen({ navigation }: Props) {
             createdAt: m.createdAt,
             attachmentName: m.attachment?.originalName ?? null,
             attachmentIsImage: m.attachment?.isImage ?? false,
+            isDeleted: false,
           },
           lastMessageAt: m.createdAt,
           unreadCount: m.senderId === user?.id ? current.unreadCount : current.unreadCount + 1,
@@ -83,6 +84,8 @@ export default function ConversationsScreen({ navigation }: Props) {
       });
     });
     const offChanged = onHubEvent('ConversationChanged', () => load()); // Yeni sohbet, üye değişikliği
+    // Silinen mesaj son mesaj olabilir ve okunmamış sayısı düşebilir: sunucudan güncelini al
+    const offDeleted = onHubEvent('MessageDeleted', () => load());
     const offRemoved = onHubEvent('ConversationRemoved', (id: string) =>
       setConversations((prev) => prev.filter((c) => c.id !== id))
     );
@@ -92,6 +95,7 @@ export default function ConversationsScreen({ navigation }: Props) {
     return () => {
       offMessage();
       offChanged();
+      offDeleted();
       offRemoved();
       offReconnected();
     };
@@ -113,6 +117,7 @@ export default function ConversationsScreen({ navigation }: Props) {
 
   function renderPreview(c: ConversationSummary) {
     if (!c.lastMessage) return c.type === 'Group' ? 'Grup oluşturuldu' : 'Henüz mesaj yok';
+    if (c.lastMessage.isDeleted) return 'Bu mesaj silindi';
     const prefix =
       c.lastMessage.senderId === user?.id ? 'Sen: ' : c.type === 'Group' ? `${c.lastMessage.senderName}: ` : '';
     const { attachmentName, attachmentIsImage, text } = c.lastMessage;
@@ -151,7 +156,14 @@ export default function ConversationsScreen({ navigation }: Props) {
                   <Text style={[styles.time, unread && styles.timeUnread]}>{formatListTime(item.lastMessageAt)}</Text>
                 </View>
                 <View style={styles.bottomLine}>
-                  <Text style={[styles.preview, unread && styles.previewUnread]} numberOfLines={1}>
+                  <Text
+                    style={[
+                      styles.preview,
+                      unread && styles.previewUnread,
+                      item.lastMessage?.isDeleted && styles.previewDeleted,
+                    ]}
+                    numberOfLines={1}
+                  >
                     {renderPreview(item)}
                   </Text>
                   {unread && (
@@ -193,6 +205,7 @@ const makeStyles = (c: ThemeColors) =>
     bottomLine: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
     preview: { flex: 1, fontSize: 14, color: c.textTertiary, marginRight: 8 },
     previewUnread: { color: c.text },
+    previewDeleted: { fontStyle: 'italic', color: c.textMuted },
     badge: {
       minWidth: 22,
       height: 22,

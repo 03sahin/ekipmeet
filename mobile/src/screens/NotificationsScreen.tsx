@@ -56,7 +56,12 @@ export default function NotificationsScreen({ navigation }: Props) {
       const off = onHubEvent('NotificationReceived', (n: AppNotification) =>
         setItems((prev) => (prev.some((p) => p.id === n.id) ? prev : [n, ...prev]))
       );
-      return off;
+      // Bir mesaj silinince bildirimindeki önizleme de değişir: açık listeyi tazele
+      const offChanged = onHubEvent('NotificationsChanged', () => load());
+      return () => {
+        off();
+        offChanged();
+      };
     }, [load])
   );
 
