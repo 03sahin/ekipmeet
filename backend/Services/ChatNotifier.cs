@@ -14,6 +14,10 @@ public class ChatNotifier(IHubContext<RoomHub> hub)
     public Task MessageSent(IEnumerable<Guid> memberIds, ChatMessageResponse message) =>
         hub.Clients.Groups(GroupsOf(memberIds)).SendAsync(RoomHubEvents.ConversationMessage, message);
 
+    // Mesaj herkes için silindi: açık sohbet ekranı baloncuğu, liste önizlemesini günceller
+    public Task MessageDeleted(IEnumerable<Guid> memberIds, Guid conversationId, long messageId) =>
+        hub.Clients.Groups(GroupsOf(memberIds)).SendAsync(RoomHubEvents.MessageDeleted, conversationId, messageId);
+
     // Sohbet oluşturuldu, üye eklendi/ayrıldı, sahip değişti: istemci listeyi/detayı yeniden çeker
     public Task ConversationChanged(IEnumerable<Guid> memberIds, Guid conversationId) =>
         hub.Clients.Groups(GroupsOf(memberIds)).SendAsync(RoomHubEvents.ConversationChanged, conversationId);

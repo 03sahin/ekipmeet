@@ -9,14 +9,15 @@ public record UserSummary(Guid Id, string DisplayName);
 // Dosyanın kendisi değil bilgisi; indirmek için GET /api/attachments/{Id}
 public record AttachmentResponse(Guid Id, string OriginalName, string ContentType, long SizeBytes, bool IsImage);
 
-// Ekli son mesajda liste "📷 Fotoğraf" / "📎 dosya-adı" gösterir
+// Ekli son mesajda liste "📷 Fotoğraf" / "📎 dosya-adı" gösterir; silinmişse "Bu mesaj silindi"
 public record LastMessagePreview(
     Guid SenderId,
     string SenderName,
     string Text,
     DateTime CreatedAt,
     string? AttachmentName,
-    bool AttachmentIsImage);
+    bool AttachmentIsImage,
+    bool IsDeleted);
 
 // Sohbet listesindeki bir satır
 public record ConversationSummary(
@@ -37,6 +38,7 @@ public record ConversationDetail(
     DateTime CreatedAt,
     List<ConversationMemberResponse> Members);
 
+// Silinmiş mesajda Text boş ve Attachment null döner; istemci IsDeleted'a bakıp "Bu mesaj silindi" gösterir
 public record ChatMessageResponse(
     long Id,
     Guid ConversationId,
@@ -44,7 +46,8 @@ public record ChatMessageResponse(
     string SenderName,
     string Text,
     DateTime CreatedAt,
-    AttachmentResponse? Attachment);
+    AttachmentResponse? Attachment,
+    bool IsDeleted = false);
 
 public class CreateDirectRequest
 {

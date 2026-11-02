@@ -61,6 +61,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(n => n.Type).HasConversion<string>().HasMaxLength(20);
             e.Property(n => n.Data).HasColumnType("jsonb"); // İçinde arama yapılabilsin (sohbet okununca bildirimleri de okundu say)
             e.HasIndex(n => new { n.UserId, n.CreatedAt }); // "Benim bildirimlerim, yeniden eskiye"
+            e.HasIndex(n => n.ChatMessageId); // Mesaj silinince bildirimlerini bulmak için
         });
 
         modelBuilder.Entity<DeviceToken>(e =>

@@ -10,7 +10,7 @@ public record TestUser(Guid Id, string Email, string DisplayName);
 public record AuthResult(string AccessToken, string RefreshToken, TestUser User);
 public record IdResult(Guid Id);
 public record AttachmentResult(Guid Id, string OriginalName, string ContentType, long SizeBytes, bool IsImage);
-public record MessageResult(long Id, string Text, AttachmentResult? Attachment);
+public record MessageResult(long Id, string Text, AttachmentResult? Attachment, bool IsDeleted = false);
 
 // Oturum açmış bir test kullanıcısı: kendi HttpClient'ı her istekte kendi token'ını gönderir
 public sealed record Session(HttpClient Client, AuthResult Auth)

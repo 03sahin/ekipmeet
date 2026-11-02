@@ -21,6 +21,7 @@ public static class RoomHubEvents
     public const string ConversationMessage = "ConversationMessage";
     public const string ConversationChanged = "ConversationChanged";
     public const string ConversationRemoved = "ConversationRemoved";
+    public const string MessageDeleted = "MessageDeleted"; // (conversationId, messageId)
 
     // Toplantılar (kişisel gruplara gider)
     public const string MeetingInvited = "MeetingInvited";

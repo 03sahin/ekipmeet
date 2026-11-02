@@ -20,4 +20,7 @@ public class ChatMessage
     public Attachment? Attachment { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Herkes için silindi: satır kalır (sayfalama ve sıra bozulmasın) ama metni boşaltılır, eki silinir
+    public DateTime? DeletedAt { get; set; }
 }

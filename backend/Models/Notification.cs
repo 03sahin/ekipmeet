@@ -22,6 +22,9 @@ public class Notification
     // Dokununca nereye gidileceği: {"conversationId": "..."} ya da {"meetingId": "..."} (PostgreSQL'de jsonb)
     public string Data { get; set; } = "{}";
 
+    // Sohbet mesajı bildiriminin hangi mesaja ait olduğu: mesaj silinince bildirimdeki önizleme de temizlenir
+    public long? ChatMessageId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ReadAt { get; set; }
 }

@@ -28,13 +28,17 @@ public class ConversationsController(
     // Üye olmayana 403 değil 404: "böyle bir sohbet var ama giremezsin" bilgisi bile sızmasın
     private NotFoundObjectResult ConversationNotFound() => NotFound(new { message = "Sohbet bulunamadı." });
 
-    // IsImage hesaplanan bir özellik, SQL'e çevrilemez; aynı kuralı burada açıkça yazıyoruz
+    // IsImage hesaplanan bir özellik, SQL'e çevrilemez; aynı kuralı burada açıkça yazıyoruz.
+    // Silinmiş mesajın metni ve eki zaten temizlenir; yine de içerik burada da açıkça dışarıda bırakılır.
     private static readonly Expression<Func<ChatMessage, ChatMessageResponse>> ToMessageResponse =
-        m => new ChatMessageResponse(m.Id, m.ConversationId, m.SenderId, m.Sender.DisplayName, m.Text, m.CreatedAt,
-            m.Attachment == null
+        m => new ChatMessageResponse(m.Id, m.ConversationId, m.SenderId, m.Sender.DisplayName,
+            m.DeletedAt == null ? m.Text : "",
+            m.CreatedAt,
+            m.DeletedAt != null || m.Attachment == null
                 ? null
                 : new AttachmentResponse(m.Attachment.Id, m.Attachment.OriginalName, m.Attachment.ContentType,
-                    m.Attachment.SizeBytes, m.Attachment.ContentType.StartsWith("image/")));
+                    m.Attachment.SizeBytes, m.Attachment.ContentType.StartsWith("image/")),
+            m.DeletedAt != null);
 
     // Sohbeti üyeleriyle getirir; kullanıcı üye değilse null (yani 404)
     private Task<Conversation?> FindForMember(Guid id, Guid userId) =>
@@ -57,13 +61,16 @@ public class ConversationsController(
                     : m.Conversation.Members.Where(o => o.UserId != me).Select(o => o.User.DisplayName).FirstOrDefault() ?? "",
                 m.Conversation.Messages
                     .OrderByDescending(x => x.Id)
-                    .Select(x => new LastMessagePreview(x.SenderId, x.Sender.DisplayName, x.Text, x.CreatedAt,
-                        x.Attachment != null ? x.Attachment.OriginalName : null,
-                        x.Attachment != null && x.Attachment.ContentType.StartsWith("image/")))
+                    .Select(x => new LastMessagePreview(x.SenderId, x.Sender.DisplayName,
+                        x.DeletedAt == null ? x.Text : NotificationService.DeletedMessageText,
+                        x.CreatedAt,
+                        x.DeletedAt == null && x.Attachment != null ? x.Attachment.OriginalName : null,
+                        x.DeletedAt == null && x.Attachment != null && x.Attachment.ContentType.StartsWith("image/"),
+                        x.DeletedAt != null))
                     .FirstOrDefault(),
                 m.Conversation.LastMessageAt,
-                // Okunmamış: başkalarının, son okuduğum andan sonra yazdıkları
-                m.Conversation.Messages.Count(x => x.SenderId != me && x.CreatedAt > m.LastReadAt)))
+                // Okunmamış: başkalarının, son okuduğum andan sonra yazdıkları (silinenler sayılmaz)
+                m.Conversation.Messages.Count(x => x.SenderId != me && x.CreatedAt > m.LastReadAt && x.DeletedAt == null)))
             .ToListAsync();
 
         return Ok(conversations);
@@ -169,6 +176,40 @@ public class ConversationsController(
         await notifier.MessageSent(conversation.Members.Select(m => m.UserId), response);
         await notifications.ChatMessage(conversation, message, User.GetDisplayName(), attachment: null);
         return StatusCode(StatusCodes.Status201Created, response);
+    }
+
+    // Mesajı herkes için siler: satır kalır, metin boşaltılır, ek kaydı ve dosyası silinir.
+    // Üye değilse ya da mesaj yok/zaten silinmişse 404; üye ama mesaj başkasınınsa 403.
+    [HttpDelete("{id:guid}/messages/{messageId:long}")]
+    public async Task<IActionResult> DeleteMessage(Guid id, long messageId)
+    {
+        var me = User.GetUserId();
+        var conversation = await FindForMember(id, me);
+        if (conversation is null) return ConversationNotFound();
+
+        var message = await db.ChatMessages.Include(m => m.Attachment)
+            .FirstOrDefaultAsync(m => m.Id == messageId && m.ConversationId == id);
+        if (message is null || message.DeletedAt is not null) return NotFound(new { message = "Mesaj bulunamadı." });
+        if (message.SenderId != me)
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Sadece kendi mesajını silebilirsin." });
+
+        var storageKey = message.Attachment?.StorageKey;
+        if (message.Attachment is not null)
+        {
+            db.Attachments.Remove(message.Attachment);
+            message.AttachmentId = null;
+        }
+        message.Text = string.Empty;
+        message.DeletedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        // Kayıt silindikten SONRA: silme başarısız olursa dosya hâlâ mesaja bağlı kalırdı
+        if (storageKey is not null) await storage.DeleteAsync(storageKey);
+
+        var memberIds = conversation.Members.Select(m => m.UserId).ToList();
+        await notifier.MessageDeleted(memberIds, id, messageId);
+        var notifiedUsers = await notifications.ChatMessageDeleted(conversation, message, User.GetDisplayName());
+        foreach (var userId in notifiedUsers) await notifier.NotificationsChanged(userId);
+        return NoContent();
     }
 
     [HttpPost("{id:guid}/read")]

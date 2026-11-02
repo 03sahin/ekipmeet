@@ -5,6 +5,7 @@ using EkipMeet.Api.Hubs;
 using EkipMeet.Api.Models;
 using EkipMeet.Api.Services.Push;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 
 namespace EkipMeet.Api.Services;
 
@@ -17,6 +18,7 @@ public class NotificationService(
     ConversationPresence conversationPresence)
 {
     private const int PreviewLength = 80; // Push'ta mesajın tamamı değil, kısa önizleme gider
+    public const string DeletedMessageText = "Bu mesaj silindi";
 
     public static NotificationResponse ToResponse(Notification n) =>
         new(n.Id, n.Type, n.Title, n.Body, JsonDocument.Parse(n.Data).RootElement.Clone(), n.CreatedAt, n.ReadAt);
@@ -43,7 +45,25 @@ public class NotificationService(
         {
             ["conversationId"] = conversation.Id.ToString(),
             ["conversationTitle"] = title, // Bildirime dokununca sohbet ekranının başlığı
-        });
+        }, chatMessageId: message.Id);
+    }
+
+    // Mesaj silindi: o mesajın bildirimlerinde içerik kalmasın. Etkilenen kullanıcıların listesi döner.
+    // (Telefona çoktan düşmüş push bildirimi geri alınamaz; uygulama içi liste ve zil güncellenir.)
+    public async Task<List<Guid>> ChatMessageDeleted(Conversation conversation, ChatMessage message, string senderName)
+    {
+        var userIds = await db.Notifications
+            .Where(n => n.ChatMessageId == message.Id)
+            .Select(n => n.UserId)
+            .Distinct()
+            .ToListAsync();
+        if (userIds.Count == 0) return userIds;
+
+        var body = conversation.Type == ConversationType.Group ? $"{senderName}: {DeletedMessageText}" : DeletedMessageText;
+        await db.Notifications
+            .Where(n => n.ChatMessageId == message.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(n => n.Body, Shorten(body, 300)));
+        return userIds;
     }
 
     public Task Meeting(IEnumerable<Guid> userIds, NotificationType type, Meeting meeting, string organizerName)
@@ -62,14 +82,18 @@ public class NotificationService(
         });
     }
 
-    private async Task Create(List<Guid> userIds, NotificationType type, string title, string body, Dictionary<string, string> data)
+    private async Task Create(List<Guid> userIds, NotificationType type, string title, string body,
+        Dictionary<string, string> data, long? chatMessageId = null)
     {
         userIds = userIds.Distinct().ToList();
         if (userIds.Count == 0) return;
 
         var json = JsonSerializer.Serialize(data);
         var notifications = userIds
-            .Select(id => new Notification { UserId = id, Type = type, Title = title, Body = body, Data = json })
+            .Select(id => new Notification
+            {
+                UserId = id, Type = type, Title = title, Body = body, Data = json, ChatMessageId = chatMessageId,
+            })
             .ToList();
         db.Notifications.AddRange(notifications);
         await db.SaveChangesAsync();
